@@ -1,4 +1,23 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,130 +27,156 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const discord_js_1 = require("discord.js");
-const request_1 = __importDefault(require("request"));
+const discord = __importStar(require("discord.js"));
+const KiiteAPI_1 = require("./KiiteAPI");
 require('dotenv').config();
-const notificList = [];
-let notificFlag = false;
-let notificUserId = '';
-let notificChannel;
-const client = new discord_js_1.Client({
-    intents: ['GUILDS', 'GUILD_MEMBERS', 'GUILD_MESSAGES']
-});
+const notificList = {};
+const client = new discord.Client({ intents: [discord.Intents.FLAGS.GUILDS] });
+const listSongFormat = (title) => title.map((v, k) => `**${k + 1}. **${v}`);
 client.once('ready', () => {
-    var _a;
+    var _a, _b, _c;
     console.log('Ready!');
     console.log((_a = client.user) === null || _a === void 0 ? void 0 : _a.tag);
+    const data = [{
+            name: 'kcns',
+            description: 'KiiteCafeでの選曲を通知します',
+            type: 1,
+            options: [
+                {
+                    name: 'now',
+                    description: 'Cafeで今流れている曲とCafeにいる人数を表示します',
+                    type: 1
+                },
+                {
+                    name: 'start',
+                    description: '選曲通知をオンにします',
+                    type: 1
+                },
+                {
+                    name: 'stop',
+                    description: '選曲通知をオフにします',
+                    type: 1
+                },
+                {
+                    name: 'add',
+                    description: '通知する曲のリストに曲を追加します',
+                    type: 1,
+                    options: [{
+                            type: 3,
+                            name: 'music_id',
+                            description: '追加する曲のID',
+                            required: true
+                        }]
+                },
+                {
+                    name: 'list',
+                    description: '通知する曲のリストを表示します',
+                    type: 1
+                }
+            ]
+        }];
+    (_b = client.application) === null || _b === void 0 ? void 0 : _b.commands.set(data, (_c = process.env.TEST_SERVER_ID) !== null && _c !== void 0 ? _c : '');
 });
-client.on('messageCreate', (message) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    if (message.author.bot)
+client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c;
+    var _d;
+    if (!interaction.isCommand() || interaction.commandName !== 'kcns')
         return;
-    if (message.content.startsWith('k!')) {
-        const [, command, ...args] = message.content.trim().split(/[!,./-\s]/);
-        // if ((/^n(ow)?$/i).test(command)) {
-        //     // nanika
-        // }
-        // const exp = [
-        //     {
-        //         key: 'now',
-        //         func: () => {
-        //             // nanika
-        //         }
-        //     }
-        // ];
-        // for (const item of exp) {
-        //     if ((new RegExp(`^(${item.key.charAt(0)}|${item.key})$`, 'i')).test(command)) {
-        //         item.func(command, args);
-        //     }
-        // }
-        switch (command) {
-            case 'n':
-            case 'now': {
-                const nowSongP = getAPI('https://cafe.kiite.jp/api/cafe/now_playing');
-                const cafeNowP = getAPI('https://cafe.kiite.jp/api/cafe/user_count');
-                message.channel.send(`${(_a = (yield nowSongP)) === null || _a === void 0 ? void 0 : _a.title}\nCafeには現在${yield cafeNowP}人います！`);
-                break;
-            }
-            case 'h':
-            case 'help': {
-                message.channel.send('KiiteCafeであなたの好きな曲が流れそうな時通知してくれるbotです\nコマンドは全て半角で入力してください\n`k!help` この文章を表示します\n`k!now` 現在Cafeで流れている曲とCafe内の人数を表示します');
-                break;
-            }
-            case 's': {
-                // nanika
-                break;
-            }
-            case 'start': {
-                notificFlag = true;
-                notificUserId = message.author.id;
-                notificChannel = message.channel;
-                message.channel.send(`<@${message.author.id}> 通知リストの曲が選曲される直前に通知します！`);
-                break;
-            }
-            case 'stop': {
-                // nanika
-                break;
-            }
-            case 'a':
-            case 'add': {
-                const pushList = yield getAPI('https://cafe.kiite.jp/api/songs/by_video_ids', { video_ids: args.join(',') });
-                const pushListTitles = '\n' + pushList.map((v) => v.title).join('\n');
-                notificList.push(...args);
-                message.channel.send('以下の曲を通知リストに追加しました！' + pushListTitles);
-                break;
-            }
-            case 'r':
-            case 'remove': {
-                // nanika
-                break;
-            }
-            case 'l':
-            case 'list': {
-                // nanika
-                break;
-            }
-            case 'c':
-            case 'clear': {
-                // nanika
-                break;
-            }
+    switch (interaction.options.getSubcommand()) {
+        case 'now': {
+            const nowSongP = (0, KiiteAPI_1.getAPI)('https://cafe.kiite.jp/api/cafe/now_playing');
+            const cafeNowP = (0, KiiteAPI_1.getAPI)('https://cafe.kiite.jp/api/cafe/user_count');
+            interaction.reply({
+                content: `${(_a = (yield nowSongP)) === null || _a === void 0 ? void 0 : _a.title}\nCafeには現在${yield cafeNowP}人います！`,
+                ephemeral: true
+            });
+            break;
         }
+        case 'start': {
+            notificList[interaction.user.id].flag = true;
+            interaction.reply({
+                content: '通知リストの曲が選曲される直前に通知します！',
+                ephemeral: true
+            });
+            break;
+        }
+        case 'stop': {
+            notificList[interaction.user.id].flag = false;
+            interaction.reply({
+                content: '通知を停止しました！',
+                ephemeral: true
+            });
+            break;
+        }
+        case 'add': {
+            const args = (_b = interaction.options.getString('music_id')) === null || _b === void 0 ? void 0 : _b.split(',');
+            if (args) {
+                (_c = notificList[_d = interaction.user.id]) !== null && _c !== void 0 ? _c : (notificList[_d] = {
+                    flag: false,
+                    channel: interaction.channel,
+                    userId: interaction.user.id,
+                    songList: []
+                });
+                const pushList = yield (0, KiiteAPI_1.getAPI)('https://cafe.kiite.jp/api/songs/by_video_ids', { video_ids: args.join(',') });
+                console.log('pushList: ', pushList);
+                const pushListTitles = pushList.map((v) => v.title);
+                notificList[interaction.user.id].songList.push(...args);
+                interaction.reply({
+                    embeds: [{
+                            fields: [
+                                {
+                                    name: '以下の曲を通知リストに追加しました！',
+                                    value: listSongFormat(pushListTitles).join('\n')
+                                }
+                            ]
+                        }],
+                    ephemeral: true
+                });
+            }
+            break;
+        }
+        // case 'r':
+        // case 'remove': {
+        //     // nanika
+        //     break;
+        // }
+        case 'list': {
+            const pushList = yield (0, KiiteAPI_1.getAPI)('https://cafe.kiite.jp/api/songs/by_video_ids', { video_ids: notificList[interaction.user.id].songList.join(',') });
+            interaction.reply({
+                embeds: [{
+                        fields: [
+                            {
+                                name: `全${pushList.length}曲`,
+                                value: listSongFormat(pushList.map((v) => v.title)).join('\n')
+                            }
+                        ]
+                    }],
+                ephemeral: true
+            });
+            break;
+        }
+        // case 'c':
+        // case 'clear': {
+        //     // nanika
+        //     break;
+        // }
     }
 }));
-function observeNextSong() {
+function observeNextSong(apiUrl) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        const nextSong = yield getAPI('https://cafe.kiite.jp/api/cafe/next_song');
+        const nextSong = yield (0, KiiteAPI_1.getAPI)(apiUrl);
         const nowTime = new Date().getTime();
         const startTime = new Date(nextSong.start_time).getTime();
         const msecDuration = Math.min(nextSong.msec_duration, 480e3);
-        if (notificFlag) {
-            if (notificList.some(e => e === nextSong.video_id)) {
-                notificChannel.send(`<@${notificUserId}> リストの曲が流れるよ！`);
+        for (const key in notificList) {
+            if (notificList.flag && notificList[key].songList.some(e => e === nextSong.video_id)) {
+                (_a = notificList[key].channel) === null || _a === void 0 ? void 0 : _a.send(`<@${notificList[key].userId}> リストの曲が流れるよ！`);
             }
         }
-        console.log(nextSong.start_time, nextSong.title);
-        setTimeout(observeNextSong, Math.max(startTime + msecDuration - 30e3 - nowTime, 3e3));
-    });
-}
-function getAPI(url, queryParam = {}) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { response, body } = yield new Promise(resolve => (0, request_1.default)({ url: url, qs: queryParam, json: true }, (error, response, body) => {
-            resolve(Object.assign({}, { error: error, response: response, body: body }));
-        }));
-        if (response.statusCode === 200) {
-            console.log('APIを呼び出しました');
-            return body;
-        }
-        else {
-            console.log('APIの読み込みに失敗しました');
-            return null;
-        }
+        setTimeout(observeNextSong.bind(null, 'https://cafe.kiite.jp/api/cafe/next_song'), Math.max(startTime + msecDuration - 30e3 - nowTime, 3e3));
     });
 }
 client.login(process.env.TOKEN);
-observeNextSong();
+observeNextSong('https://cafe.kiite.jp/api/cafe/now_playing');
