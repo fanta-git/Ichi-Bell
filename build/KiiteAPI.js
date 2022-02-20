@@ -13,20 +13,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAPI = void 0;
+/* eslint-disable camelcase */
 const request_1 = __importDefault(require("request"));
-function getAPI(url, queryParam = {}) {
-    return __awaiter(this, void 0, void 0, function* () {
-        console.log('APIを呼び出しました');
-        const { response, body } = yield new Promise(resolve => (0, request_1.default)({ url: url, qs: queryParam, json: true }, (error, response, body) => {
-            resolve(Object.assign({}, { error: error, response: response, body: body }));
-        }));
-        if (response.statusCode === 200) {
-            return body;
-        }
-        else {
-            console.log('APIの読み込みに失敗しました');
-            return null;
-        }
-    });
-}
+const getAPI = (url, queryParam = {}) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('APIを呼び出しました');
+    const { error, response, body } = yield new Promise(resolve => (0, request_1.default)({ url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true }, (error, response, body) => {
+        resolve(Object.assign({}, { error: error, response: response, body: body }));
+    }));
+    if (response.statusCode === 200) {
+        return body;
+    }
+    else {
+        console.error('APIの読み込みに失敗しました');
+        console.error(new Error(error));
+        throw new Error(error);
+    }
+});
 exports.getAPI = getAPI;
