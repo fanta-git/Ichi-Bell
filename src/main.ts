@@ -1,19 +1,74 @@
 import * as discord from 'discord.js';
-import { getAPI } from './KiiteAPI';
+import * as KiiteAPI from './KiiteAPI';
+import Keyv from 'keyv';
 require('dotenv').config();
 
+type extendObject<T> = { [key: string]: T };
 type NotificListItem = {
     flag: boolean;
-    songList: string[];
+    songList: KiiteAPI.ReturnSongData[];
     userId: string;
     channel: discord.TextBasedChannel | null;
 };
+type interaction = discord.Interaction<discord.CacheType>;
 
-const notificList: { [key: string]: NotificListItem } = {};
-
+const notificList: extendObject<NotificListItem> = {};
 const client = new discord.Client({ intents: [discord.Intents.FLAGS.GUILDS] });
-
 const listSongFormat = (title: string[]): string[] => title.map((v, k) => `**${k + 1}. **${v}`);
+
+class UserData {
+    static noticeList = new Keyv('sqlite://db.sqlite', { table: 'noticeList' });
+
+    parsonalNoticeList: extendObject<KiiteAPI.ReturnSongData>;
+    database: Keyv<any>;
+    flag: boolean | undefined;
+    userId: string | undefined;
+    channel: discord.TextBasedChannel | undefined;
+
+    constructor (userId: string, channel: discord.TextBasedChannel) {
+        this.parsonalNoticeList = {};
+        this.database = new Keyv('sqlite://db.sqlite', { table: `user_${userId}` });
+        this.database.get('userId').then((value: string | undefined) => {
+            if (value === undefined) {
+                this.database.set('flag', this.flag = true);
+                this.database.set('userId', this.userId = userId);
+                this.database.set('channel', this.channel = channel);
+            } else {
+                this.userId = value;
+                this.database.get('flag').then((v: boolean) => (this.flag = v));
+                this.database.get('channel').then((v: discord.TextBasedChannel) => (this.channel = v));
+            }
+        });
+    }
+
+    addNoticeList (interaction: interaction, songs: KiiteAPI.ReturnSongData[]) {
+        for (const song of songs) {
+            UserData.noticeList.get(song.video_id).then((value: extendObject<interaction> | undefined = {}) => {
+                value[interaction.user.id] = interaction;
+                UserData.noticeList.set(song.video_id, value);
+            });
+            this.parsonalNoticeList[song.video_id] = song;
+        }
+    }
+
+    removeNoticeList (userId: string, videoIds: string[]) {
+        for (const videoId of videoIds) {
+            UserData.noticeList.get(videoId).then((value: extendObject<interaction> | undefined = {}) => {
+                delete value[userId];
+                UserData.noticeList.set(videoId, value);
+            });
+            delete this.parsonalNoticeList[videoId];
+        }
+    }
+
+    clearNoticeList (userId: string) {
+        this.removeNoticeList(userId, Object.keys(this.parsonalNoticeList));
+    }
+
+    flagChange (to: boolean): void {
+        this.database.set('flag', to);
+    }
+}
 
 client.once('ready', () => {
     console.log('Ready!');
@@ -54,6 +109,17 @@ client.once('ready', () => {
                 name: 'list',
                 description: '通知する曲のリストを表示します',
                 type: 1
+            },
+            {
+                name: 'eval',
+                description: 'aa',
+                type: 1,
+                options: [{
+                    type: 3,
+                    name: 'com',
+                    description: 'aa',
+                    required: true
+                }]
             }
         ]
     }];
@@ -67,8 +133,8 @@ client.on('interactionCreate', async (interaction) => {
     try {
         switch (interaction.options.getSubcommand()) {
         case 'now': {
-            const nowSongP = getAPI('/api/cafe/now_playing');
-            const cafeNowP = getAPI('/api/cafe/user_count');
+            const nowSongP = KiiteAPI.getAPI('/api/cafe/now_playing');
+            const cafeNowP = KiiteAPI.getAPI('/api/cafe/user_count');
 
             interaction.reply({
                 content: `${(await nowSongP)?.title}\nCafeには現在${await cafeNowP}人います！`,
@@ -96,18 +162,18 @@ client.on('interactionCreate', async (interaction) => {
             const args = interaction.options.getString('music_id')?.split(',');
 
             if (args) {
-                notificList[interaction.user.id] ??= {
+                const data = new Keyv('sqlite://db.sqlite', { table: `user_${String(interaction.user.id)}` });
+                const pushList = await KiiteAPI.getAPI('/api/songs/by_video_ids', { video_ids: args.join(',') });
+                const pushListTitles = pushList.map(v => v.title);
+                const datadata: NotificListItem = (await data.get('root')) ?? {
                     flag: false,
                     channel: interaction.channel,
                     userId: interaction.user.id,
                     songList: []
                 };
 
-                const pushList = await getAPI('/api/songs/by_video_ids', { video_ids: args.join(',') });
-                console.log('pushList: ', pushList);
-                const pushListTitles = pushList.map((v: any) => v.title);
-
-                notificList[interaction.user.id].songList.push(...args);
+                datadata.songList.push(...pushList);
+                data.set('root', datadata);
                 interaction.reply({
                     embeds: [{
                         fields: [{
@@ -125,16 +191,15 @@ client.on('interactionCreate', async (interaction) => {
         //     break;
         // }
         case 'list': {
-            const pushList = await getAPI('/api/songs/by_video_ids', { video_ids: notificList[interaction.user.id].songList.join(',') });
-            if (pushList === null) {
-                return;
-            }
+            const datadata: NotificListItem = await (new Keyv('sqlite://db.sqlite', { table: 'data' + String(interaction.user.id) })).get('root');
+            // const pushList = await KiiteAPI.getAPI('/api/songs/by_video_ids', { video_ids: datadata.songList.map(e => e.video_id).join(',') });
+            const pushList = datadata.songList.map(e => e.title);
 
             interaction.reply({
                 embeds: [{
                     fields: [{
                         name: `全${pushList.length}曲`,
-                        value: listSongFormat(pushList.map((v: any) => v.title)).join('\n')
+                        value: listSongFormat(pushList).join('\n')
                     }]
                 }],
                 ephemeral: true
@@ -145,8 +210,14 @@ client.on('interactionCreate', async (interaction) => {
         //     // nanika
         //     break;
         // }
+        case 'eval': {
+            console.log(interaction.options.getString('com'));
+            // eslint-disable-next-line no-eval
+            eval(interaction.options.getString('com') ?? '');
+        }
         }
     } catch (e) {
+        console.error(e);
         interaction.reply({
             embeds: [{
                 fields: [{
@@ -162,13 +233,13 @@ client.on('interactionCreate', async (interaction) => {
 
 async function observeNextSong (apiUrl: '/api/cafe/now_playing' | '/api/cafe/next_song') {
     try {
-        const nextSong = await getAPI(apiUrl);
+        const nextSong = await KiiteAPI.getAPI(apiUrl);
         const nowTime = new Date().getTime();
         const startTime = new Date(nextSong.start_time).getTime();
         const msecDuration = Math.min(nextSong.msec_duration, 480e3);
 
         for (const key in notificList) {
-            if (notificList.flag && notificList[key].songList.some(e => e === nextSong.video_id)) {
+            if (notificList.flag && notificList[key].songList.some(e => e.video_id === nextSong.video_id)) {
                 notificList[key].channel?.send(`<@${notificList[key].userId}> リストの曲が流れるよ！`);
             }
         }
