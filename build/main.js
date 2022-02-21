@@ -55,6 +55,23 @@ class UserData {
             }
         });
     }
+    static noticeSong(songId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const noticeUsers = yield UserData.noticeList.get(songId);
+            if (!noticeUsers)
+                return;
+            const servers = {};
+            for (const interaction of Object.values(noticeUsers)) {
+                if (interaction.channelId && interaction.channel) {
+                    const data = { userId: interaction.user.id, channel: interaction.channel };
+                    servers[interaction.channelId].push(data);
+                }
+            }
+            for (const sendData of Object.values(servers)) {
+                sendData[0].channel.send(sendData.map(e => `<@${e.userId}>`).join('') + 'リストの曲が流れるよ！');
+            }
+        });
+    }
     addNoticeList(interaction, songs) {
         for (const song of songs) {
             UserData.noticeList.get(song.video_id).then((value = {}) => {
@@ -81,10 +98,12 @@ class UserData {
     }
 }
 UserData.noticeList = new keyv_1.default('sqlite://db.sqlite', { table: 'noticeList' });
+const dataRoot = {};
 client.once('ready', () => {
     var _a, _b, _c;
     console.log('Ready!');
     console.log((_a = client.user) === null || _a === void 0 ? void 0 : _a.tag);
+    observeNextSong('/api/cafe/now_playing');
     const data = [{
             name: 'kcns',
             description: 'KiiteCafeでの選曲を通知します',
@@ -138,15 +157,17 @@ client.once('ready', () => {
 });
 client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d;
-    if (!interaction.isCommand() || interaction.commandName !== 'kcns')
+    var _e;
+    if (!interaction.isCommand() || interaction.commandName !== 'kcns' || !interaction.channel)
         return;
+    (_a = dataRoot[_e = interaction.user.id]) !== null && _a !== void 0 ? _a : (dataRoot[_e] = new UserData(interaction.user.id, interaction.channel));
     try {
         switch (interaction.options.getSubcommand()) {
             case 'now': {
                 const nowSongP = KiiteAPI.getAPI('/api/cafe/now_playing');
                 const cafeNowP = KiiteAPI.getAPI('/api/cafe/user_count');
                 interaction.reply({
-                    content: `${(_a = (yield nowSongP)) === null || _a === void 0 ? void 0 : _a.title}\nCafeには現在${yield cafeNowP}人います！`,
+                    content: `${(_b = (yield nowSongP)) === null || _b === void 0 ? void 0 : _b.title}\nCafeには現在${yield cafeNowP}人います！`,
                     ephemeral: true
                 });
                 break;
@@ -168,19 +189,11 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                 break;
             }
             case 'add': {
-                const args = (_b = interaction.options.getString('music_id')) === null || _b === void 0 ? void 0 : _b.split(',');
+                const args = (_c = interaction.options.getString('music_id')) === null || _c === void 0 ? void 0 : _c.split(',');
                 if (args) {
-                    const data = new keyv_1.default('sqlite://db.sqlite', { table: `user_${String(interaction.user.id)}` });
                     const pushList = yield KiiteAPI.getAPI('/api/songs/by_video_ids', { video_ids: args.join(',') });
                     const pushListTitles = pushList.map(v => v.title);
-                    const datadata = (_c = (yield data.get('root'))) !== null && _c !== void 0 ? _c : {
-                        flag: false,
-                        channel: interaction.channel,
-                        userId: interaction.user.id,
-                        songList: []
-                    };
-                    datadata.songList.push(...pushList);
-                    data.set('root', datadata);
+                    dataRoot[interaction.user.id].addNoticeList(interaction, pushList);
                     interaction.reply({
                         embeds: [{
                                 fields: [{
@@ -198,9 +211,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             //     break;
             // }
             case 'list': {
-                const datadata = yield (new keyv_1.default('sqlite://db.sqlite', { table: 'data' + String(interaction.user.id) })).get('root');
-                // const pushList = await KiiteAPI.getAPI('/api/songs/by_video_ids', { video_ids: datadata.songList.map(e => e.video_id).join(',') });
-                const pushList = datadata.songList.map(e => e.title);
+                const pushList = Object.values(dataRoot[interaction.user.id].parsonalNoticeList).map(v => v.title);
                 interaction.reply({
                     embeds: [{
                             fields: [{
@@ -238,18 +249,14 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
     }
 }));
 function observeNextSong(apiUrl) {
-    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const nextSong = yield KiiteAPI.getAPI(apiUrl);
             const nowTime = new Date().getTime();
             const startTime = new Date(nextSong.start_time).getTime();
             const msecDuration = Math.min(nextSong.msec_duration, 480e3);
-            for (const key in notificList) {
-                if (notificList.flag && notificList[key].songList.some(e => e.video_id === nextSong.video_id)) {
-                    (_a = notificList[key].channel) === null || _a === void 0 ? void 0 : _a.send(`<@${notificList[key].userId}> リストの曲が流れるよ！`);
-                }
-            }
+            UserData.noticeSong(nextSong.video_id);
+            setTimeout(() => { var _a; return (_a = client.user) === null || _a === void 0 ? void 0 : _a.setActivity({ name: nextSong.title, type: 'LISTENING' }); }, startTime - nowTime);
             setTimeout(observeNextSong.bind(null, '/api/cafe/next_song'), Math.max(startTime + msecDuration - 30e3 - nowTime, 3e3));
         }
         catch (e) {
@@ -258,4 +265,3 @@ function observeNextSong(apiUrl) {
     });
 }
 client.login(process.env.TOKEN);
-observeNextSong('/api/cafe/now_playing');

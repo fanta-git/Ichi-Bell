@@ -41,6 +41,22 @@ class UserData {
         });
     }
 
+    static async noticeSong (songId: string) {
+        const noticeUsers: extendObject<interaction> | undefined = await UserData.noticeList.get(songId);
+        if (!noticeUsers) return;
+
+        const servers: extendObject<{ userId: string, channel: discord.TextBasedChannel }[]> = {};
+        for (const interaction of Object.values(noticeUsers)) {
+            if (interaction.channelId && interaction.channel) {
+                const data = { userId: interaction.user.id, channel: interaction.channel };
+                servers[interaction.channelId].push(data);
+            }
+        }
+        for (const sendData of Object.values(servers)) {
+            sendData[0].channel.send(sendData.map(e => `<@${e.userId}>`).join('') + 'リストの曲が流れるよ！');
+        }
+    }
+
     addNoticeList (interaction: interaction, songs: KiiteAPI.ReturnSongData[]) {
         for (const song of songs) {
             UserData.noticeList.get(song.video_id).then((value: extendObject<interaction> | undefined = {}) => {
@@ -69,10 +85,12 @@ class UserData {
         this.database.set('flag', to);
     }
 }
+const dataRoot: extendObject<UserData> = {};
 
 client.once('ready', () => {
     console.log('Ready!');
     console.log(client.user?.tag);
+    observeNextSong('/api/cafe/now_playing');
 
     const data: Array<discord.ApplicationCommandDataResolvable> = [{
         name: 'kcns',
@@ -128,7 +146,8 @@ client.once('ready', () => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isCommand() || interaction.commandName !== 'kcns') return;
+    if (!interaction.isCommand() || interaction.commandName !== 'kcns' || !interaction.channel) return;
+    dataRoot[interaction.user.id] ??= new UserData(interaction.user.id, interaction.channel);
 
     try {
         switch (interaction.options.getSubcommand()) {
@@ -162,18 +181,10 @@ client.on('interactionCreate', async (interaction) => {
             const args = interaction.options.getString('music_id')?.split(',');
 
             if (args) {
-                const data = new Keyv('sqlite://db.sqlite', { table: `user_${String(interaction.user.id)}` });
                 const pushList = await KiiteAPI.getAPI('/api/songs/by_video_ids', { video_ids: args.join(',') });
                 const pushListTitles = pushList.map(v => v.title);
-                const datadata: NotificListItem = (await data.get('root')) ?? {
-                    flag: false,
-                    channel: interaction.channel,
-                    userId: interaction.user.id,
-                    songList: []
-                };
+                dataRoot[interaction.user.id].addNoticeList(interaction, pushList);
 
-                datadata.songList.push(...pushList);
-                data.set('root', datadata);
                 interaction.reply({
                     embeds: [{
                         fields: [{
@@ -191,9 +202,7 @@ client.on('interactionCreate', async (interaction) => {
         //     break;
         // }
         case 'list': {
-            const datadata: NotificListItem = await (new Keyv('sqlite://db.sqlite', { table: 'data' + String(interaction.user.id) })).get('root');
-            // const pushList = await KiiteAPI.getAPI('/api/songs/by_video_ids', { video_ids: datadata.songList.map(e => e.video_id).join(',') });
-            const pushList = datadata.songList.map(e => e.title);
+            const pushList = Object.values(dataRoot[interaction.user.id].parsonalNoticeList).map(v => v.title);
 
             interaction.reply({
                 embeds: [{
@@ -238,11 +247,9 @@ async function observeNextSong (apiUrl: '/api/cafe/now_playing' | '/api/cafe/nex
         const startTime = new Date(nextSong.start_time).getTime();
         const msecDuration = Math.min(nextSong.msec_duration, 480e3);
 
-        for (const key in notificList) {
-            if (notificList.flag && notificList[key].songList.some(e => e.video_id === nextSong.video_id)) {
-                notificList[key].channel?.send(`<@${notificList[key].userId}> リストの曲が流れるよ！`);
-            }
-        }
+        UserData.noticeSong(nextSong.video_id);
+
+        setTimeout(() => client.user?.setActivity({ name: nextSong.title, type: 'LISTENING' }), startTime - nowTime);
         setTimeout(observeNextSong.bind(null, '/api/cafe/next_song'), Math.max(startTime + msecDuration - 30e3 - nowTime, 3e3));
     } catch (e) {
         setTimeout(observeNextSong.bind(null, '/api/cafe/next_song'), 15e3);
@@ -250,4 +257,3 @@ async function observeNextSong (apiUrl: '/api/cafe/now_playing' | '/api/cafe/nex
 }
 
 client.login(process.env.TOKEN);
-observeNextSong('/api/cafe/now_playing');
