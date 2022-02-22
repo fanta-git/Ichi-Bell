@@ -13,7 +13,7 @@ type NotificListItem = {
 type interaction = discord.Interaction<discord.CacheType>;
 
 const notificList: extendObject<NotificListItem> = {};
-const client = new discord.Client({ intents: [discord.Intents.FLAGS.GUILDS] });
+const client = new discord.Client({ intents: ['GUILDS'] });
 const listSongFormat = (title: string[]): string[] => title.map((v, k) => `**${k + 1}. **${v}`);
 
 class UserData {
@@ -152,11 +152,58 @@ client.on('interactionCreate', async (interaction) => {
     try {
         switch (interaction.options.getSubcommand()) {
         case 'now': {
-            const nowSongP = KiiteAPI.getAPI('/api/cafe/now_playing');
             const cafeNowP = KiiteAPI.getAPI('/api/cafe/user_count');
+            const nowSong = await KiiteAPI.getAPI('/api/cafe/now_playing');
+            const rotateData = await KiiteAPI.getAPI('/api/cafe/rotate_users', { ids: nowSong.id.toString() });
 
             interaction.reply({
-                content: `${(await nowSongP)?.title}\nCafeには現在${await cafeNowP}人います！`,
+                embeds: [{
+                    title: nowSong.title,
+                    url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
+                    // description: nowSong.baseinfo.description
+                    //     .replace(/\s*https?:\/\/[\w!?/+\-~=;.,*&@#$%()'[\]]+\s*/g, ' $& ')
+                    //     .replace(/(?<![/\w@＠])(mylist\/|user\/|series\/|sm|nm|so|ar|nc|co)\d+/g, nicoURL),
+                    author: {
+                        name: nowSong.baseinfo.user_nickname,
+                        icon_url: nowSong.baseinfo.user_icon_url,
+                        url: 'https://www.nicovideo.jp/user/' + nowSong.baseinfo.user_id
+                    },
+                    thumbnail: {
+                        url: nowSong.thumbnail
+                    },
+                    fields: [
+                        {
+                            name: ':arrow_forward:再生数',
+                            value: Number(nowSong.baseinfo.view_counter).toLocaleString('ja'),
+                            inline: true
+                        },
+                        // {
+                        //     name: ':speech_balloon:コメント',
+                        //     value: Number(nowSong.baseinfo.comment_num).toLocaleString('ja'),
+                        //     inline: true
+                        // },
+                        // {
+                        //     name: ':file_folder:マイリスト',
+                        //     value: Number(nowSong.baseinfo.mylist_counter).toLocaleString('ja'),
+                        //     inline: true
+                        // },
+                        {
+                            name: ':busts_in_silhouette:Cafe内の人数',
+                            value: (await cafeNowP).toLocaleString('ja'),
+                            inline: true
+                        },
+                        // {
+                        //     name: ':heartbeat:新規お気に入り数',
+                        //     value: (nowSong.new_fav_user_ids?.length ?? 0).toLocaleString('ja'),
+                        //     inline: true
+                        // },
+                        {
+                            name: ':arrows_counterclockwise:回転数',
+                            value: (rotateData[nowSong.id]?.length ?? 0).toLocaleString('ja'),
+                            inline: true
+                        }
+                    ]
+                }],
                 ephemeral: true
             });
             break;
@@ -239,6 +286,36 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 });
+
+function nicoURL (match: string, type: string | undefined) {
+    let url;
+
+    switch (type) {
+    case 'mylist/':
+    case 'user/':
+        url = `https://www.nicovideo.jp/${match}`;
+        break;
+    case 'series/':
+        url = `https://www.nicovideo.jp/${match}`;
+        break;
+    case 'sm':
+    case 'nm':
+    case 'so':
+        url = `https://www.nicovideo.jp/watch/${match}`;
+        break;
+    case 'ar':
+        url = `https://ch.nicovideo.jp/article/${match}`;
+        break;
+    case 'nc':
+        url = `https://commons.nicovideo.jp/material/${match}`;
+        break;
+    case 'co':
+        url = `https://com.nicovideo.jp/community/${match}`;
+        break;
+    }
+
+    return url ?? match;
+}
 
 async function observeNextSong (apiUrl: '/api/cafe/now_playing' | '/api/cafe/next_song') {
     try {

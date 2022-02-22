@@ -1,19 +1,42 @@
 /* eslint-disable camelcase */
 import request from 'request';
 
-export type SelectReasons = {
+type extendObject<T> = { [key: string]: T };
+
+export type User = {
+    id: null,
+    user_id: number,
+    user_name: string,
+    nickname: string,
+    avatar_url: string
+}
+
+export type ReasonPriority = {
     type: 'priority_playlist',
     user_id: number,
     list_title: string,
     list_id: string
-}|{
+}
+
+export type ReasonPriorityWithComment = ReasonPriority & {
+    playlist_comment: string,
+    user: User
+}
+
+export type ReasonPlaylist = {
     type: 'add_playlist',
     user_id: number,
     list_id: number
-}|{
+}
+
+export type ReasonFavorite = {
     type: 'favorite',
     user_id: number
-};
+}
+
+export type SelectReasons = ReasonPriority | ReasonPlaylist | ReasonFavorite;
+
+export type SelectReasonsWithComment = ReasonPriorityWithComment | ReasonPlaylist | ReasonFavorite;
 
 export type NicovideoData = {
     video_id: string,
@@ -48,7 +71,7 @@ export type ReturnCafeSong = {
     updated_at: string,
     reasons: Array<SelectReasons>,
     thumbnail: string,
-    new_fav_user_ids: number[],
+    new_fav_user_ids: number[] | null,
     baseinfo: NicovideoData,
     colors: string[],
     presenter_user_ids: number[] | null,
@@ -72,9 +95,12 @@ export type ReturnSongData = {
 };
 
 export type FuncAPI = {
-    (url: '/api/cafe/now_playing' | '/api/cafe/next_song', queryParam?: never): Promise<ReturnCafeSong>,
+    (url: '/api/cafe/now_playing' | '/api/cafe/next_song', queryParam?: {}): Promise<ReturnCafeSong>,
     (url: '/api/cafe/user_count', queryParam?: {}): Promise<number>,
     (url: '/api/songs/by_video_ids', queryParam: { video_ids: string }): Promise<ReturnSongData[]>
+    (url: '/api/cafe/rotate_users', queryParam: { ids: string }): Promise<extendObject<number[]>>
+    (url: '/api/cafe/timetable', queryParam: { limit: number, with_comment?: false }): Promise<SelectReasons[]>
+    (url: '/api/cafe/timetable', queryParam: { limit: number, with_comment: true }): Promise<SelectReasonsWithComment[]>
 };
 
 export const getAPI: FuncAPI = async (url, queryParam = {}) => {

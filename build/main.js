@@ -36,7 +36,7 @@ const KiiteAPI = __importStar(require("./KiiteAPI"));
 const keyv_1 = __importDefault(require("keyv"));
 require('dotenv').config();
 const notificList = {};
-const client = new discord.Client({ intents: [discord.Intents.FLAGS.GUILDS] });
+const client = new discord.Client({ intents: ['GUILDS'] });
 const listSongFormat = (title) => title.map((v, k) => `**${k + 1}. **${v}`);
 class UserData {
     constructor(userId, channel) {
@@ -156,18 +156,65 @@ client.once('ready', () => {
     (_b = client.application) === null || _b === void 0 ? void 0 : _b.commands.set(data, (_c = process.env.TEST_SERVER_ID) !== null && _c !== void 0 ? _c : '');
 });
 client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
-    var _e;
+    var _a, _b, _c, _d, _e;
+    var _f;
     if (!interaction.isCommand() || interaction.commandName !== 'kcns' || !interaction.channel)
         return;
-    (_a = dataRoot[_e = interaction.user.id]) !== null && _a !== void 0 ? _a : (dataRoot[_e] = new UserData(interaction.user.id, interaction.channel));
+    (_a = dataRoot[_f = interaction.user.id]) !== null && _a !== void 0 ? _a : (dataRoot[_f] = new UserData(interaction.user.id, interaction.channel));
     try {
         switch (interaction.options.getSubcommand()) {
             case 'now': {
-                const nowSongP = KiiteAPI.getAPI('/api/cafe/now_playing');
                 const cafeNowP = KiiteAPI.getAPI('/api/cafe/user_count');
+                const nowSong = yield KiiteAPI.getAPI('/api/cafe/now_playing');
+                const rotateData = yield KiiteAPI.getAPI('/api/cafe/rotate_users', { ids: nowSong.id.toString() });
                 interaction.reply({
-                    content: `${(_b = (yield nowSongP)) === null || _b === void 0 ? void 0 : _b.title}\nCafeには現在${yield cafeNowP}人います！`,
+                    embeds: [{
+                            title: nowSong.title,
+                            url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
+                            // description: nowSong.baseinfo.description
+                            //     .replace(/\s*https?:\/\/[\w!?/+\-~=;.,*&@#$%()'[\]]+\s*/g, ' $& ')
+                            //     .replace(/(?<![/\w@＠])(mylist\/|user\/|series\/|sm|nm|so|ar|nc|co)\d+/g, nicoURL),
+                            author: {
+                                name: nowSong.baseinfo.user_nickname,
+                                icon_url: nowSong.baseinfo.user_icon_url,
+                                url: 'https://www.nicovideo.jp/user/' + nowSong.baseinfo.user_id
+                            },
+                            thumbnail: {
+                                url: nowSong.thumbnail
+                            },
+                            fields: [
+                                {
+                                    name: ':arrow_forward:再生数',
+                                    value: Number(nowSong.baseinfo.view_counter).toLocaleString('ja'),
+                                    inline: true
+                                },
+                                // {
+                                //     name: ':speech_balloon:コメント',
+                                //     value: Number(nowSong.baseinfo.comment_num).toLocaleString('ja'),
+                                //     inline: true
+                                // },
+                                // {
+                                //     name: ':file_folder:マイリスト',
+                                //     value: Number(nowSong.baseinfo.mylist_counter).toLocaleString('ja'),
+                                //     inline: true
+                                // },
+                                {
+                                    name: ':busts_in_silhouette:Cafe内の人数',
+                                    value: (yield cafeNowP).toLocaleString('ja'),
+                                    inline: true
+                                },
+                                // {
+                                //     name: ':heartbeat:新規お気に入り数',
+                                //     value: (nowSong.new_fav_user_ids?.length ?? 0).toLocaleString('ja'),
+                                //     inline: true
+                                // },
+                                {
+                                    name: ':arrows_counterclockwise:回転数',
+                                    value: ((_c = (_b = rotateData[nowSong.id]) === null || _b === void 0 ? void 0 : _b.length) !== null && _c !== void 0 ? _c : 0).toLocaleString('ja'),
+                                    inline: true
+                                }
+                            ]
+                        }],
                     ephemeral: true
                 });
                 break;
@@ -189,7 +236,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                 break;
             }
             case 'add': {
-                const args = (_c = interaction.options.getString('music_id')) === null || _c === void 0 ? void 0 : _c.split(',');
+                const args = (_d = interaction.options.getString('music_id')) === null || _d === void 0 ? void 0 : _d.split(',');
                 if (args) {
                     const pushList = yield KiiteAPI.getAPI('/api/songs/by_video_ids', { video_ids: args.join(',') });
                     const pushListTitles = pushList.map(v => v.title);
@@ -230,7 +277,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             case 'eval': {
                 console.log(interaction.options.getString('com'));
                 // eslint-disable-next-line no-eval
-                eval((_d = interaction.options.getString('com')) !== null && _d !== void 0 ? _d : '');
+                eval((_e = interaction.options.getString('com')) !== null && _e !== void 0 ? _e : '');
             }
         }
     }
@@ -248,6 +295,33 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
         });
     }
 }));
+function nicoURL(match, type) {
+    let url;
+    switch (type) {
+        case 'mylist/':
+        case 'user/':
+            url = `https://www.nicovideo.jp/${match}`;
+            break;
+        case 'series/':
+            url = `https://www.nicovideo.jp/${match}`;
+            break;
+        case 'sm':
+        case 'nm':
+        case 'so':
+            url = `https://www.nicovideo.jp/watch/${match}`;
+            break;
+        case 'ar':
+            url = `https://ch.nicovideo.jp/article/${match}`;
+            break;
+        case 'nc':
+            url = `https://commons.nicovideo.jp/material/${match}`;
+            break;
+        case 'co':
+            url = `https://com.nicovideo.jp/community/${match}`;
+            break;
+    }
+    return url !== null && url !== void 0 ? url : match;
+}
 function observeNextSong(apiUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
