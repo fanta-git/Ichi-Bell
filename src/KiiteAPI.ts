@@ -102,6 +102,22 @@ export type ReturnSongData = {
     video_thumbnail: string
 };
 
+export type ContentsSongs = {
+    order_num: number,
+    video_id: string,
+    added_at: string,
+    updated_at: string,
+    track_description: string
+};
+
+export type ContentsOwner = {
+    user_id: number,
+    user_name: string,
+    nickname: string,
+    avatar_url: string,
+    status: string
+};
+
 export type PlaylistContents = {
     status: 'succeeded',
     list_id: string,
@@ -109,43 +125,26 @@ export type PlaylistContents = {
     created_at: string,
     updated_at: string,
     description: string,
-    owner: {
-        user_id: number,
-        user_name: string,
-        nickname: string,
-        avatar_url: string,
-        status: string
-    },
-    songs: string[]
+    owner: ContentsOwner,
+    songs: ContentsSongs[]
 };
-
-export type PlaylistContentsDetail = Omit<PlaylistContents, 'songs'> & {
-    songs: {
-        order_num: number,
-        video_id: string,
-        added_at: string,
-        updated_at: string,
-        track_description: string
-    }[]
-}
 
 export type FailedPlaylistContents = {
     status: 'failed',
     error: {
         message: string
     }
-}
+};
 
 export type FuncAPI = {
     (url: '/api/cafe/now_playing' | '/api/cafe/next_song', queryParam?: {}): Promise<ReturnCafeSong>,
     (url: '/api/cafe/user_count', queryParam?: {}): Promise<number>,
-    (url: '/api/songs/by_video_ids', queryParam: { video_ids: string | number }): Promise<ReturnSongData[]>
+    (url: '/api/songs/by_video_ids', queryParam: { video_ids: string }): Promise<ReturnSongData[]>
     (url: '/api/cafe/rotate_users', queryParam: { ids: string | number }): Promise<Record<string, number[]>>
     (url: '/api/cafe/timetable', queryParam: { limit: number, with_comment?: false }): Promise<ReturnCafeSong[]>
     (url: '/api/cafe/timetable', queryParam: { limit: number, with_comment: true }): Promise<RetrunCafeSongWithComment[]>
     (url: '/api/artist/id', queryParam: { artist_id: number | string }): Promise<ArtistData> | null
-    (url: '/api/playlists/contents', queryParam: { list_id: string }): Promise<PlaylistContents | FailedPlaylistContents>
-    (url: '/api/playlists/contents/detail', queryParam: { list_id: string }): Promise<PlaylistContentsDetail | FailedPlaylistContents>
+    (url: '/api/playlists/contents/detail', queryParam: { list_id: string }): Promise<PlaylistContents | FailedPlaylistContents>
 };
 
 export const getAPI: FuncAPI = async (url, queryParam = {}) => {
