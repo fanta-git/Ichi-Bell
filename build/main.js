@@ -27,9 +27,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
+var _UserDataClass_database;
 Object.defineProperty(exports, "__esModule", { value: true });
 const discord = __importStar(require("discord.js"));
 const KiiteAPI = __importStar(require("./KiiteAPI"));
@@ -38,26 +50,31 @@ require('dotenv').config();
 const notificList = {};
 const client = new discord.Client({ intents: ['GUILDS'] });
 const listSongFormat = (title) => title.map((v, k) => `**${k + 1}. **${v}`);
-class UserData {
-    constructor(userId, channel) {
-        this.parsonalNoticeList = {};
-        this.database = new keyv_1.default('sqlite://db.sqlite', { table: `user_${userId}` });
-        this.database.get('userId').then((value) => {
-            if (value === undefined) {
-                this.database.set('flag', this.flag = true);
-                this.database.set('userId', this.userId = userId);
-                this.database.set('channel', this.channel = channel);
+const msTommss = (ms) => `${ms / 60e3 | 0}:${((ms / 1e3 | 0) % 60).toString().padStart(2, '0')}`;
+class SuperKeyv extends keyv_1.default {
+    change(namespace, callback) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = yield this.get(namespace);
+            const newData = yield callback(data);
+            if (newData === undefined) {
+                yield this.delete(namespace);
             }
             else {
-                this.userId = value;
-                this.database.get('flag').then((v) => (this.flag = v));
-                this.database.get('channel').then((v) => (this.channel = v));
+                yield this.set(namespace, newData);
             }
+            return newData;
         });
+    }
+}
+class UserDataClass {
+    constructor(userId) {
+        _UserDataClass_database.set(this, void 0);
+        __classPrivateFieldSet(this, _UserDataClass_database, new SuperKeyv('sqlite://db.sqlite', { table: `user_${userId}` }), "f");
+        this.userId = userId;
     }
     static noticeSong(songId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const noticeUsers = yield UserData.noticeList.get(songId);
+            const noticeUsers = yield UserDataClass.noticeList.get(songId);
             if (!noticeUsers)
                 return;
             const servers = {};
@@ -72,40 +89,74 @@ class UserData {
             }
         });
     }
-    addNoticeList(interaction, songs) {
-        for (const song of songs) {
-            UserData.noticeList.get(song.video_id).then((value = {}) => {
-                value[interaction.user.id] = interaction;
-                UserData.noticeList.set(song.video_id, value);
-            });
-            this.parsonalNoticeList[song.video_id] = song;
-        }
+    addNoticeList(songs) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const addSongs = [];
+            const songList = (_a = yield __classPrivateFieldGet(this, _UserDataClass_database, "f").get('songList')) !== null && _a !== void 0 ? _a : {};
+            for (const song of songs) {
+                const videoId = song.video_id;
+                if (songList[videoId] === undefined)
+                    addSongs.push(song);
+                songList[videoId] = song;
+                UserDataClass.noticeList.change(videoId, (item = {}) => {
+                    item[this.userId] = this.userId;
+                    return item;
+                });
+            }
+            __classPrivateFieldGet(this, _UserDataClass_database, "f").set('songList', songList);
+            return addSongs;
+        });
     }
-    removeNoticeList(userId, videoIds) {
-        for (const videoId of videoIds) {
-            UserData.noticeList.get(videoId).then((value = {}) => {
-                delete value[userId];
-                UserData.noticeList.set(videoId, value);
-            });
-            delete this.parsonalNoticeList[videoId];
-        }
+    removeNoticeList(videoIds) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const removeSongs = [];
+            const songList = (_a = yield __classPrivateFieldGet(this, _UserDataClass_database, "f").get('songList')) !== null && _a !== void 0 ? _a : {};
+            for (const videoId of videoIds) {
+                if (songList[videoId] !== undefined)
+                    removeSongs.push(songList[videoId]);
+                delete songList[videoId];
+                UserDataClass.noticeList.change(videoId, (item = {}) => {
+                    delete item[this.userId];
+                    return Object.keys(item).length ? item : undefined;
+                });
+            }
+            __classPrivateFieldGet(this, _UserDataClass_database, "f").set('songList', songList);
+            return removeSongs;
+        });
     }
-    clearNoticeList(userId) {
-        this.removeNoticeList(userId, Object.keys(this.parsonalNoticeList));
+    clearNoticeList() {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const songList = (_a = yield __classPrivateFieldGet(this, _UserDataClass_database, "f").get('songList')) !== null && _a !== void 0 ? _a : {};
+            for (const videoId of Object.keys(songList)) {
+                UserDataClass.noticeList.get(videoId).then((item = {}) => {
+                    delete item[this.userId];
+                    return Object.keys(item).length ? item : undefined;
+                });
+                delete songList[videoId];
+            }
+            __classPrivateFieldGet(this, _UserDataClass_database, "f").set('songList', songList);
+        });
     }
-    flagChange(to) {
-        this.database.set('flag', to);
+    getSongList() {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const songList = (_a = yield __classPrivateFieldGet(this, _UserDataClass_database, "f").get('songList')) !== null && _a !== void 0 ? _a : {};
+            return [...Object.values(songList)];
+        });
     }
 }
-UserData.noticeList = new keyv_1.default('sqlite://db.sqlite', { table: 'noticeList' });
-const dataRoot = {};
+_UserDataClass_database = new WeakMap();
+UserDataClass.noticeList = new SuperKeyv('sqlite://db.sqlite', { table: 'noticeList' });
 client.once('ready', () => {
     var _a, _b, _c;
     console.log('Ready!');
     console.log((_a = client.user) === null || _a === void 0 ? void 0 : _a.tag);
     observeNextSong('/api/cafe/now_playing');
     const data = [{
-            name: 'kcns',
+            name: 'ib',
             description: 'KiiteCafeでの選曲を通知します',
             type: 1,
             options: [
@@ -136,6 +187,17 @@ client.once('ready', () => {
                         }]
                 },
                 {
+                    name: 'register',
+                    description: '通知する曲を登録します。登録にはKiiteのプレイリストとニコニコのマイリストが使えます。',
+                    type: 1,
+                    options: [{
+                            type: 3,
+                            name: 'list_url',
+                            description: '追加するプレイリストまたはマイリストのURL',
+                            required: true
+                        }]
+                },
+                {
                     name: 'list',
                     description: '通知する曲のリストを表示します',
                     type: 1
@@ -156,58 +218,45 @@ client.once('ready', () => {
     (_b = client.application) === null || _b === void 0 ? void 0 : _b.commands.set(data, (_c = process.env.TEST_SERVER_ID) !== null && _c !== void 0 ? _c : '');
 });
 client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d, _e;
-    var _f;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     if (!interaction.isCommand() || interaction.commandName !== 'kcns' || !interaction.channel)
         return;
-    (_a = dataRoot[_f = interaction.user.id]) !== null && _a !== void 0 ? _a : (dataRoot[_f] = new UserData(interaction.user.id, interaction.channel));
     try {
         switch (interaction.options.getSubcommand()) {
             case 'now': {
                 const cafeNowP = KiiteAPI.getAPI('/api/cafe/user_count');
                 const nowSong = yield KiiteAPI.getAPI('/api/cafe/now_playing');
                 const rotateData = yield KiiteAPI.getAPI('/api/cafe/rotate_users', { ids: nowSong.id.toString() });
+                const artistData = yield KiiteAPI.getAPI('/api/artist/id', { artist_id: nowSong.artist_id });
                 interaction.reply({
                     embeds: [{
                             title: nowSong.title,
                             url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
-                            // description: nowSong.baseinfo.description
-                            //     .replace(/\s*https?:\/\/[\w!?/+\-~=;.,*&@#$%()'[\]]+\s*/g, ' $& ')
-                            //     .replace(/(?<![/\w@＠])(mylist\/|user\/|series\/|sm|nm|so|ar|nc|co)\d+/g, nicoURL),
                             author: {
                                 name: nowSong.baseinfo.user_nickname,
                                 icon_url: nowSong.baseinfo.user_icon_url,
-                                url: 'https://www.nicovideo.jp/user/' + nowSong.baseinfo.user_id
+                                url: (_a = 'https://kiite.jp/creator/' + (artistData === null || artistData === void 0 ? void 0 : artistData.creator_id)) !== null && _a !== void 0 ? _a : ''
                             },
                             thumbnail: {
                                 url: nowSong.thumbnail
                             },
+                            color: nowSong.colors[0],
                             fields: [
+                                {
+                                    name: getStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),
+                                    value: `${msTommss(Date.now() - Date.parse(nowSong.start_time))} / ${msTommss(nowSong.msec_duration)}`,
+                                    inline: false
+                                },
                                 {
                                     name: ':arrow_forward:再生数',
                                     value: Number(nowSong.baseinfo.view_counter).toLocaleString('ja'),
                                     inline: true
                                 },
-                                // {
-                                //     name: ':speech_balloon:コメント',
-                                //     value: Number(nowSong.baseinfo.comment_num).toLocaleString('ja'),
-                                //     inline: true
-                                // },
-                                // {
-                                //     name: ':file_folder:マイリスト',
-                                //     value: Number(nowSong.baseinfo.mylist_counter).toLocaleString('ja'),
-                                //     inline: true
-                                // },
                                 {
                                     name: ':busts_in_silhouette:Cafe内の人数',
                                     value: (yield cafeNowP).toLocaleString('ja'),
                                     inline: true
                                 },
-                                // {
-                                //     name: ':heartbeat:新規お気に入り数',
-                                //     value: (nowSong.new_fav_user_ids?.length ?? 0).toLocaleString('ja'),
-                                //     inline: true
-                                // },
                                 {
                                     name: ':arrows_counterclockwise:回転数',
                                     value: ((_c = (_b = rotateData[nowSong.id]) === null || _b === void 0 ? void 0 : _b.length) !== null && _c !== void 0 ? _c : 0).toLocaleString('ja'),
@@ -237,20 +286,45 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             }
             case 'add': {
                 const args = (_d = interaction.options.getString('music_id')) === null || _d === void 0 ? void 0 : _d.split(',');
-                if (args) {
-                    const pushList = yield KiiteAPI.getAPI('/api/songs/by_video_ids', { video_ids: args.join(',') });
-                    const pushListTitles = pushList.map(v => v.title);
-                    dataRoot[interaction.user.id].addNoticeList(interaction, pushList);
-                    interaction.reply({
-                        embeds: [{
-                                fields: [{
-                                        name: '以下の曲を通知リストに追加しました！',
-                                        value: listSongFormat(pushListTitles).join('\n')
-                                    }]
-                            }],
-                        ephemeral: true
-                    });
+                if (!args)
+                    throw new TypeError('error001');
+                const userData = new UserDataClass(interaction.user.id);
+                const songDataList = yield KiiteAPI.getAPI('/api/songs/by_video_ids', { video_ids: args.join(',') });
+                const addListReturn = yield userData.addNoticeList(songDataList);
+                const pushListTitles = addListReturn.map(v => v.title);
+                interaction.reply({
+                    embeds: [{
+                            fields: [{
+                                    name: '以下の曲を通知リストに追加しました！',
+                                    value: listSongFormat(pushListTitles).join('\n')
+                                }]
+                        }],
+                    ephemeral: true
+                });
+                break;
+            }
+            case 'register': {
+                const [arg] = (_f = (_e = interaction.options.getString('list_url')) === null || _e === void 0 ? void 0 : _e.match(/https?:\/\/[\w!?/+\-~=;.,*&@#$%()'[\]]+/)) !== null && _f !== void 0 ? _f : [];
+                if (!arg)
+                    throw new TypeError('list_urlにはURLを入力してください');
+                if (arg.startsWith('https://kiite.jp/playlist/')) {
+                    const [listId] = (_g = arg.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/)) !== null && _g !== void 0 ? _g : [];
+                    const songData = yield KiiteAPI.getAPI('/api/playlists/contents', { list_id: listId });
+                    if (songData.status === 'failed')
+                        throw new TypeError('プレイリストの取得に失敗しました。URLが間違っていないか確認してください。\nURLが正しい場合、Kiiteが混み合っている可能性があります。その場合は時間を置いてもう一度試してみてください。');
                 }
+                const userData = new UserDataClass(interaction.user.id);
+                const addListReturn = yield userData.addNoticeList(songDataList);
+                const pushListTitles = addListReturn.map(v => v.title);
+                interaction.reply({
+                    embeds: [{
+                            fields: [{
+                                    name: '以下の曲を通知リストに追加しました！',
+                                    value: listSongFormat(pushListTitles).join('\n')
+                                }]
+                        }],
+                    ephemeral: true
+                });
                 break;
             }
             // case 'remove': {
@@ -258,16 +332,26 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             //     break;
             // }
             case 'list': {
-                const pushList = Object.values(dataRoot[interaction.user.id].parsonalNoticeList).map(v => v.title);
-                interaction.reply({
-                    embeds: [{
-                            fields: [{
-                                    name: `全${pushList.length}曲`,
-                                    value: listSongFormat(pushList).join('\n')
-                                }]
-                        }],
-                    ephemeral: true
-                });
+                const userData = new UserDataClass(interaction.user.id);
+                const songList = yield userData.getSongList();
+                if (songList.length) {
+                    const songListTitles = songList.map(v => v.title);
+                    interaction.reply({
+                        embeds: [{
+                                fields: [{
+                                        name: `全${songListTitles.length}曲`,
+                                        value: listSongFormat(songListTitles).join('\n')
+                                    }]
+                            }],
+                        ephemeral: true
+                    });
+                }
+                else {
+                    interaction.reply({
+                        content: 'リストは空っぽです！`/kcns add`コマンドを使ってリストに好きな曲を追加しましょう！',
+                        ephemeral: true
+                    });
+                }
                 break;
             }
             // case 'clear': {
@@ -277,50 +361,61 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             case 'eval': {
                 console.log(interaction.options.getString('com'));
                 // eslint-disable-next-line no-eval
-                eval((_e = interaction.options.getString('com')) !== null && _e !== void 0 ? _e : '');
+                eval((_h = interaction.options.getString('com')) !== null && _h !== void 0 ? _h : '');
             }
         }
     }
     catch (e) {
         console.error(e);
+        const errorMessage = {
+            name: 'エラー',
+            value: 'エラーが発生しました'
+        };
+        if (e instanceof Error) {
+            switch (e.message) {
+                case 'error000': {
+                    errorMessage.name = 'データの読み込みに失敗しました';
+                    errorMessage.value = '入力内容を見直してみて下さい\nまた、イベント中などでCafeが混み合うと読み込みに失敗することがあるのでそのような場合は少し待ってから再試行してみてください';
+                    break;
+                }
+                case 'error001': {
+                    errorMessage.name = 'optionが不足しています';
+                    errorMessage.value = '必須のoptionsを書き忘れていませんか？入力内容を確認してみてください';
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            errorMessage.name = e.name;
+            errorMessage.value = e.message;
+        }
         interaction.reply({
             embeds: [{
-                    fields: [{
-                            name: 'データの読み込みに失敗しました',
-                            value: '入力内容を見直してみて下さい\nまた、イベント中などでCafeが混み合うと読み込みに失敗することがあるのでそのような場合は少し待ってから再試行してみてください'
-                        }],
+                    fields: [errorMessage],
                     color: '#ff0000'
                 }],
             ephemeral: true
         });
     }
 }));
-function nicoURL(match, type) {
-    let url;
-    switch (type) {
-        case 'mylist/':
-        case 'user/':
-            url = `https://www.nicovideo.jp/${match}`;
-            break;
-        case 'series/':
-            url = `https://www.nicovideo.jp/${match}`;
-            break;
-        case 'sm':
-        case 'nm':
-        case 'so':
-            url = `https://www.nicovideo.jp/watch/${match}`;
-            break;
-        case 'ar':
-            url = `https://ch.nicovideo.jp/article/${match}`;
-            break;
-        case 'nc':
-            url = `https://commons.nicovideo.jp/material/${match}`;
-            break;
-        case 'co':
-            url = `https://com.nicovideo.jp/community/${match}`;
-            break;
+function getStatusbar(nowPoint, endPoint, length) {
+    const nowLength = nowPoint * (length + 1) / endPoint | 0;
+    let statusbar = '';
+    statusbar += (nowLength <= 0) ? '┠' : '┣';
+    for (let i = 1; i < length - 1; i++) {
+        if (i < nowLength) {
+            statusbar += '━';
+        }
+        else if (i === nowLength) {
+            statusbar += '╉';
+        }
+        else {
+            statusbar += '─';
+        }
     }
-    return url !== null && url !== void 0 ? url : match;
+    statusbar += (length - 1 <= nowLength) ? '┫' : '┤';
+    return statusbar;
 }
 function observeNextSong(apiUrl) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -329,7 +424,7 @@ function observeNextSong(apiUrl) {
             const nowTime = new Date().getTime();
             const startTime = new Date(nextSong.start_time).getTime();
             const msecDuration = Math.min(nextSong.msec_duration, 480e3);
-            UserData.noticeSong(nextSong.video_id);
+            // UserDataClass.noticeSong(nextSong.video_id);
             setTimeout(() => { var _a; return (_a = client.user) === null || _a === void 0 ? void 0 : _a.setActivity({ name: nextSong.title, type: 'LISTENING' }); }, startTime - nowTime);
             setTimeout(observeNextSong.bind(null, '/api/cafe/next_song'), Math.max(startTime + msecDuration - 30e3 - nowTime, 3e3));
         }
