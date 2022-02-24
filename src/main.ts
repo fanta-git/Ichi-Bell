@@ -5,15 +5,23 @@ require('dotenv').config();
 
 const client = new discord.Client({ intents: ['GUILDS'] });
 
-class UserDataClass {
-    static #noticeList: Keyv = new Keyv('sqlite://db.sqlite', { table: 'noticeList' });
+type noticeListContents = Record<string, string> | undefined;
+type userDataContents = {
+    registeredList: KiiteAPI.PlaylistContents | undefined,
+    userId: string | undefined,
+    channelId: string | undefined
+};
 
-    #database: Keyv;
+class UserDataClass {
+    static #noticeList: Keyv<noticeListContents> = new Keyv('sqlite://db.sqlite', { table: 'noticeList' });
+    static #userData: Keyv<userDataContents> = new Keyv('sqlite://db.sqlite', { table: 'userData' });
+
+    #database: Promise<userDataContents>;
     #userId: string;
 
     constructor (userId: string) {
-        this.#database = new Keyv('sqlite://db.sqlite', { table: `user_${userId}` });
         this.#userId = userId;
+        this.#database = UserDataClass.#userData.get(userId).then(item => item ?? {} as userDataContents);
     }
 
     static async noticeSong (songId: string): Promise<void> {
@@ -35,40 +43,56 @@ class UserDataClass {
     }
 
     async registerNoticeList (playlistData: KiiteAPI.PlaylistContents, channelId: string) {
-        const nowRegisteredList: KiiteAPI.PlaylistContents | undefined = await this.#database.get('registeredList');
-        if (nowRegisteredList !== undefined) await this.unregisterNoticeList();
+        const { userId } = await this.#database;
+        if (userId) await this.unregisterNoticeList();
         for (const song of playlistData.songs) {
-            UserDataClass.#noticeList.get(song.video_id).then((item: Record<string, string> | undefined = {}) => {
+            UserDataClass.#noticeList.get(song.video_id).then((item = {}) => {
                 item[this.#userId] = this.#userId;
                 UserDataClass.#noticeList.set(song.video_id, item);
             });
         }
-        this.#database.set('userId', this.#userId);
-        this.#database.set('channelId', channelId);
-        this.#database.set('registeredList', playlistData);
+        UserDataClass.#userData.set(this.#userId, {
+            userId: this.#userId,
+            channelId: channelId,
+            registeredList: playlistData
+        });
         return true;
     }
 
+    async updateNoticeList (channelId: string) {
+        const { registeredList } = await this.#database;
+        if (registeredList === undefined) throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
+        const songListData = await KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
+        if (songListData.status === 'failed') throw new Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
+        this.registerNoticeList(songListData, channelId);
+        return songListData;
+    }
+
     async unregisterNoticeList () {
-        const registeredList: KiiteAPI.PlaylistContents | undefined = await this.#database.get('registeredList');
-        if (registeredList === undefined) return;
-        this.#database.delete('registeredList');
-        for (const videoId of registeredList.songs.map(v => v.video_id)) {
-            UserDataClass.#noticeList.get(videoId).then((item: Record<string, string> | undefined = {}) => {
+        const { registeredList } = await this.#database;
+        if (registeredList === undefined) throw Error('リストが登録されていません！');
+        UserDataClass.#userData.delete(this.#userId);
+        for (const songData of registeredList.songs) {
+            UserDataClass.#noticeList.get(songData.video_id).then((item = {}) => {
                 delete item[this.#userId];
-                return Object.keys(item).length ? item : undefined;
+                if (Object.keys(item).length) {
+                    UserDataClass.#noticeList.set(songData.video_id, item);
+                } else {
+                    UserDataClass.#noticeList.delete(songData.video_id);
+                }
             });
         }
         return registeredList;
     }
 
     async getRegisteredList () {
-        const registeredList: KiiteAPI.PlaylistContents | undefined = await this.#database.get('registeredList');
+        const { registeredList } = await this.#database;
+        if (registeredList === undefined) throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
         return registeredList;
     }
 
     async getChannel () {
-        const channelId: string | undefined = await this.#database.get('channelId');
+        const { channelId } = await this.#database;
         if (channelId === undefined) return undefined;
         return client.channels.cache.get(channelId) as discord.TextChannel;
     }
@@ -178,10 +202,8 @@ client.on('interactionCreate', async (interaction) => {
                 break;
             }
             case 'register': {
-                const [arg] = interaction.options.getString('list_url')?.match(/https?:\/\/[\w!?/+\-~=;.,*&@#$%()'[\]]+/) ?? [];
-
-                const [listId] = arg.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
-                const songListData = await KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId.trim() });
+                const [listId] = interaction.options.getString('list_url')?.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
+                const songListData = await KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId });
                 if (songListData.status === 'failed') throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 
                 const userData = new UserDataClass(interaction.user.id);
@@ -203,7 +225,6 @@ client.on('interactionCreate', async (interaction) => {
                 const userData = new UserDataClass(interaction.user.id);
                 const registeredList = await userData.getRegisteredList();
 
-                if (registeredList === undefined) throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
                 interaction.reply({
                     content: '以下のリストが通知リストとして登録されています！',
                     embeds: [{
@@ -218,11 +239,8 @@ client.on('interactionCreate', async (interaction) => {
             }
             case 'update': {
                 const userData = new UserDataClass(interaction.user.id);
-                const nowRegisteredList = await userData.getRegisteredList();
-                if (nowRegisteredList === undefined) throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
-                const songListData = await KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: nowRegisteredList.list_id });
-                if (songListData.status === 'failed') throw new Error(`プレイリストの取得に失敗しました！登録されていたリスト（${nowRegisteredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
-                userData.registerNoticeList(songListData, interaction.channelId);
+                const songListData = await userData.updateNoticeList(interaction.channelId);
+
                 interaction.reply({
                     content: '以下のリストから通知リストを更新しました！',
                     embeds: [{
@@ -237,10 +255,11 @@ client.on('interactionCreate', async (interaction) => {
             }
             case 'unregister': {
                 const target = interaction.options.getUser('target') ?? interaction.user;
-                if (target.id !== interaction.user.id && interaction.memberPermissions?.has('MANAGE_CHANNELS')) throw Error('自分以外のユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
+                if (target.id !== interaction.user.id && !interaction.memberPermissions?.has('MANAGE_CHANNELS')) throw Error('自分以外のユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
+
                 const userData = new UserDataClass(target.id);
-                const unregisterSuccess = userData.unregisterNoticeList();
-                if (unregisterSuccess === undefined) throw Error('リストが登録されていません！');
+                userData.unregisterNoticeList();
+
                 interaction.reply(`<@${target.id}>のリストの登録を解除しました！`);
             }
             }
@@ -281,16 +300,6 @@ function makeStatusbar (nowPoint: number, endPoint: number, length: number) {
 function msTommss (ms: number) {
     return `${ms / 60e3 | 0}:${((ms / 1e3 | 0) % 60).toString().padStart(2, '0')}`;
 }
-
-// function * zip (...args: any[][]) {
-//     const length = args[0].length;
-
-//     for (const arr of args) {
-//         if (arr.length !== length) return undefined;
-//     }
-
-//     for (let i = 0; i < length; i++) yield args.map(v => v[i]);
-// }
 
 async function observeNextSong (apiUrl: '/api/cafe/now_playing' | '/api/cafe/next_song') {
     try {

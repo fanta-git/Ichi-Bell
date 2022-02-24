@@ -41,7 +41,7 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var _a, _UserDataClass_noticeList, _UserDataClass_database, _UserDataClass_userId;
+var _a, _UserDataClass_noticeList, _UserDataClass_userData, _UserDataClass_database, _UserDataClass_userId;
 Object.defineProperty(exports, "__esModule", { value: true });
 const discord = __importStar(require("discord.js"));
 const KiiteAPI = __importStar(require("./KiiteAPI"));
@@ -52,8 +52,8 @@ class UserDataClass {
     constructor(userId) {
         _UserDataClass_database.set(this, void 0);
         _UserDataClass_userId.set(this, void 0);
-        __classPrivateFieldSet(this, _UserDataClass_database, new keyv_1.default('sqlite://db.sqlite', { table: `user_${userId}` }), "f");
         __classPrivateFieldSet(this, _UserDataClass_userId, userId, "f");
+        __classPrivateFieldSet(this, _UserDataClass_database, __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_userData).get(userId).then(item => item !== null && item !== void 0 ? item : {}), "f");
     }
     static noticeSong(songId) {
         var _b;
@@ -78,8 +78,8 @@ class UserDataClass {
     }
     registerNoticeList(playlistData, channelId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const nowRegisteredList = yield __classPrivateFieldGet(this, _UserDataClass_database, "f").get('registeredList');
-            if (nowRegisteredList !== undefined)
+            const { userId } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
+            if (userId)
                 yield this.unregisterNoticeList();
             for (const song of playlistData.songs) {
                 __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_noticeList).get(song.video_id).then((item = {}) => {
@@ -87,22 +87,41 @@ class UserDataClass {
                     __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_noticeList).set(song.video_id, item);
                 });
             }
-            __classPrivateFieldGet(this, _UserDataClass_database, "f").set('userId', __classPrivateFieldGet(this, _UserDataClass_userId, "f"));
-            __classPrivateFieldGet(this, _UserDataClass_database, "f").set('channelId', channelId);
-            __classPrivateFieldGet(this, _UserDataClass_database, "f").set('registeredList', playlistData);
+            __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_userData).set(__classPrivateFieldGet(this, _UserDataClass_userId, "f"), {
+                userId: __classPrivateFieldGet(this, _UserDataClass_userId, "f"),
+                channelId: channelId,
+                registeredList: playlistData
+            });
             return true;
+        });
+    }
+    updateNoticeList(channelId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { registeredList } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
+            if (registeredList === undefined)
+                throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
+            const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
+            if (songListData.status === 'failed')
+                throw new Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
+            this.registerNoticeList(songListData, channelId);
+            return songListData;
         });
     }
     unregisterNoticeList() {
         return __awaiter(this, void 0, void 0, function* () {
-            const registeredList = yield __classPrivateFieldGet(this, _UserDataClass_database, "f").get('registeredList');
+            const { registeredList } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
             if (registeredList === undefined)
-                return;
-            __classPrivateFieldGet(this, _UserDataClass_database, "f").delete('registeredList');
-            for (const videoId of registeredList.songs.map(v => v.video_id)) {
-                __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_noticeList).get(videoId).then((item = {}) => {
+                throw Error('リストが登録されていません！');
+            __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_userData).delete(__classPrivateFieldGet(this, _UserDataClass_userId, "f"));
+            for (const songData of registeredList.songs) {
+                __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_noticeList).get(songData.video_id).then((item = {}) => {
                     delete item[__classPrivateFieldGet(this, _UserDataClass_userId, "f")];
-                    return Object.keys(item).length ? item : undefined;
+                    if (Object.keys(item).length) {
+                        __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_noticeList).set(songData.video_id, item);
+                    }
+                    else {
+                        __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_noticeList).delete(songData.video_id);
+                    }
                 });
             }
             return registeredList;
@@ -110,13 +129,15 @@ class UserDataClass {
     }
     getRegisteredList() {
         return __awaiter(this, void 0, void 0, function* () {
-            const registeredList = yield __classPrivateFieldGet(this, _UserDataClass_database, "f").get('registeredList');
+            const { registeredList } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
+            if (registeredList === undefined)
+                throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
             return registeredList;
         });
     }
     getChannel() {
         return __awaiter(this, void 0, void 0, function* () {
-            const channelId = yield __classPrivateFieldGet(this, _UserDataClass_database, "f").get('channelId');
+            const { channelId } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
             if (channelId === undefined)
                 return undefined;
             return client.channels.cache.get(channelId);
@@ -125,6 +146,7 @@ class UserDataClass {
 }
 _a = UserDataClass, _UserDataClass_database = new WeakMap(), _UserDataClass_userId = new WeakMap();
 _UserDataClass_noticeList = { value: new keyv_1.default('sqlite://db.sqlite', { table: 'noticeList' }) };
+_UserDataClass_userData = { value: new keyv_1.default('sqlite://db.sqlite', { table: 'userData' }) };
 client.once('ready', () => {
     var _b, _c, _d;
     console.log('Ready!');
@@ -176,7 +198,7 @@ client.once('ready', () => {
     (_c = client.application) === null || _c === void 0 ? void 0 : _c.commands.set(data, (_d = process.env.TEST_SERVER_ID) !== null && _d !== void 0 ? _d : '');
 });
 client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c, _d, _e, _f, _g, _h, _j;
+    var _b, _c, _d, _e, _f, _g, _h;
     if (!interaction.channel)
         return;
     if (!(interaction.isButton() || interaction.isCommand()))
@@ -228,9 +250,8 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                     break;
                 }
                 case 'register': {
-                    const [arg] = (_f = (_e = interaction.options.getString('list_url')) === null || _e === void 0 ? void 0 : _e.match(/https?:\/\/[\w!?/+\-~=;.,*&@#$%()'[\]]+/)) !== null && _f !== void 0 ? _f : [];
-                    const [listId] = (_g = arg.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/)) !== null && _g !== void 0 ? _g : [];
-                    const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId.trim() });
+                    const [listId] = (_f = (_e = interaction.options.getString('list_url')) === null || _e === void 0 ? void 0 : _e.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/)) !== null && _f !== void 0 ? _f : [];
+                    const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId });
                     if (songListData.status === 'failed')
                         throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
                     const userData = new UserDataClass(interaction.user.id);
@@ -250,8 +271,6 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                 case 'list': {
                     const userData = new UserDataClass(interaction.user.id);
                     const registeredList = yield userData.getRegisteredList();
-                    if (registeredList === undefined)
-                        throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
                     interaction.reply({
                         content: '以下のリストが通知リストとして登録されています！',
                         embeds: [{
@@ -266,13 +285,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                 }
                 case 'update': {
                     const userData = new UserDataClass(interaction.user.id);
-                    const nowRegisteredList = yield userData.getRegisteredList();
-                    if (nowRegisteredList === undefined)
-                        throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
-                    const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: nowRegisteredList.list_id });
-                    if (songListData.status === 'failed')
-                        throw new Error(`プレイリストの取得に失敗しました！登録されていたリスト（${nowRegisteredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
-                    userData.registerNoticeList(songListData, interaction.channelId);
+                    const songListData = yield userData.updateNoticeList(interaction.channelId);
                     interaction.reply({
                         content: '以下のリストから通知リストを更新しました！',
                         embeds: [{
@@ -286,13 +299,11 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                     break;
                 }
                 case 'unregister': {
-                    const target = (_h = interaction.options.getUser('target')) !== null && _h !== void 0 ? _h : interaction.user;
-                    if (target.id !== interaction.user.id && ((_j = interaction.memberPermissions) === null || _j === void 0 ? void 0 : _j.has('MANAGE_CHANNELS')))
+                    const target = (_g = interaction.options.getUser('target')) !== null && _g !== void 0 ? _g : interaction.user;
+                    if (target.id !== interaction.user.id && !((_h = interaction.memberPermissions) === null || _h === void 0 ? void 0 : _h.has('MANAGE_CHANNELS')))
                         throw Error('自分以外のユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
                     const userData = new UserDataClass(target.id);
-                    const unregisterSuccess = userData.unregisterNoticeList();
-                    if (unregisterSuccess === undefined)
-                        throw Error('リストが登録されていません！');
+                    userData.unregisterNoticeList();
                     interaction.reply(`<@${target.id}>のリストの登録を解除しました！`);
                 }
             }
@@ -335,13 +346,6 @@ function makeStatusbar(nowPoint, endPoint, length) {
 function msTommss(ms) {
     return `${ms / 60e3 | 0}:${((ms / 1e3 | 0) % 60).toString().padStart(2, '0')}`;
 }
-// function * zip (...args: any[][]) {
-//     const length = args[0].length;
-//     for (const arr of args) {
-//         if (arr.length !== length) return undefined;
-//     }
-//     for (let i = 0; i < length; i++) yield args.map(v => v[i]);
-// }
 function observeNextSong(apiUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
