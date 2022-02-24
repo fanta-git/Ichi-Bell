@@ -64,13 +64,14 @@ class UserDataClass {
         if (registeredList === undefined) throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
         const songListData = await KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
         if (songListData.status === 'failed') throw new Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
+        if (songListData.updated_at === registeredList.updated_at) throw new Error('プレイリストは最新の状態です！');
         this.registerNoticeList(songListData, channelId);
         return songListData;
     }
 
     async unregisterNoticeList () {
         const { registeredList } = await this.#database;
-        if (registeredList === undefined) throw Error('リストが登録されていません！');
+        if (registeredList === undefined) throw new Error('リストが登録されていません！');
         UserDataClass.#userData.delete(this.#userId);
         for (const songData of registeredList.songs) {
             UserDataClass.#noticeList.get(songData.video_id).then((item = {}) => {
@@ -207,7 +208,7 @@ client.on('interactionCreate', async (interaction) => {
                 if (songListData.status === 'failed') throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 
                 const userData = new UserDataClass(interaction.user.id);
-                userData.registerNoticeList(songListData, interaction.channelId);
+                await userData.registerNoticeList(songListData, interaction.channelId);
 
                 interaction.reply({
                     content: '以下のリストを通知リストとして登録しました！',
@@ -258,7 +259,7 @@ client.on('interactionCreate', async (interaction) => {
                 if (target.id !== interaction.user.id && !interaction.memberPermissions?.has('MANAGE_CHANNELS')) throw Error('自分以外のユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
 
                 const userData = new UserDataClass(target.id);
-                userData.unregisterNoticeList();
+                await userData.unregisterNoticeList();
 
                 interaction.reply(`<@${target.id}>のリストの登録を解除しました！`);
             }

@@ -137,6 +137,7 @@ export type FailedPlaylistContents = {
 };
 
 export type FuncAPI = {
+    staticVariable?: { apiCallHist: number[] }
     (url: '/api/cafe/now_playing' | '/api/cafe/next_song', queryParam?: {}): Promise<ReturnCafeSong>,
     (url: '/api/cafe/user_count', queryParam?: {}): Promise<number>,
     (url: '/api/songs/by_video_ids', queryParam: { video_ids: string }): Promise<ReturnSongData[]>
@@ -148,7 +149,13 @@ export type FuncAPI = {
 };
 
 export const getAPI: FuncAPI = async (url, queryParam = {}) => {
-    console.log(new Date(), 'APIを呼び出しました');
+    const now = new Date();
+    const stc = getAPI.staticVariable ??= { apiCallHist: new Array<number>(5).fill(0) };
+    const waitTime = Math.max(stc.apiCallHist[0] + 1e3 - now.getTime(), 0);
+    stc.apiCallHist.shift();
+    stc.apiCallHist.push(now.getTime() + waitTime);
+    if (waitTime) await new Promise(resolve => setTimeout(resolve, waitTime));
+
     const { error, response, body } = await new Promise(resolve =>
         request(
             { url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true },
