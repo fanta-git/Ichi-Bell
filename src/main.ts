@@ -24,22 +24,33 @@ class UserDataClass {
         this.#database = UserDataClass.#userData.get(userId).then(item => item ?? {} as userDataContents);
     }
 
-    static async noticeSong (songId: string): Promise<void> {
+    static async noticeSong (songId: string): Promise<string[] | undefined> {
         const userIds: Record<string, string> | undefined = await UserDataClass.#noticeList.get(songId);
-        const sendData: Record<string, { server: discord.TextChannel, userIds: string[] }> = {};
+        const sendData: Record<string, { channel: discord.TextChannel, userIds: string[] }> = {};
         if (!userIds) return;
 
         for (const userId of Object.keys(userIds)) {
             const userData = new UserDataClass(userId);
             const channel = await userData.getChannel();
-            if (channel === undefined) throw new Error('チャンネルが見つかりませんでした。リストを再登録してください。');
-            sendData[channel.id] ??= { server: channel, userIds: [] };
-            sendData[channel.id].userIds.push(userId);
+            if (channel === undefined) {
+                userData.unregisterNoticeList();
+                console.log('delete', userId);
+                continue;
+            } else {
+                console.log(userId);
+                channel.guild.members.fetch(userId).catch(_ => {
+                    userData.unregisterNoticeList();
+                    console.log('delete', userId);
+                });
+                sendData[channel.id] ??= { channel: channel, userIds: [] };
+                sendData[channel.id].userIds.push(userId);
+            }
         }
 
         for (const key of Object.keys(sendData)) {
-            sendData[key].server.send(sendData[key].userIds.map(e => `<@${e}>`).join('') + 'リストの曲が流れるよ！');
+            sendData[key].channel.send(sendData[key].userIds.map(e => `<@${e}>`).join('') + 'リストの曲が流れるよ！');
         }
+        return Object.keys(userIds);
     }
 
     async registerNoticeList (playlistData: KiiteAPI.PlaylistContents, channelId: string) {
@@ -143,7 +154,7 @@ client.once('ready', () => {
                 type: 'SUB_COMMAND',
                 options: [{
                     type: 'STRING',
-                    name: 'list_url',
+                    name: 'url',
                     description: '追加するプレイリストのURL',
                     required: true
                 }]
@@ -226,7 +237,9 @@ client.on('interactionCreate', async (interaction) => {
         }
         case 'register': {
             replyManager.standby({ ephemeral: true });
-            const [listId] = interaction.options.getString('list_url')?.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
+            const url = interaction.options.getString('url') as string;
+            const [listId] = url.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
+            if (!listId) throw new Error('URLが正しくありません！`https://kiite.jp/playlist/`で始まるURLを入力してください！');
             const songListData = await KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId });
             if (songListData.status === 'failed') throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 

@@ -66,14 +66,25 @@ class UserDataClass {
             for (const userId of Object.keys(userIds)) {
                 const userData = new UserDataClass(userId);
                 const channel = yield userData.getChannel();
-                if (channel === undefined)
-                    throw new Error('チャンネルが見つかりませんでした。リストを再登録してください。');
-                (_b = sendData[_c = channel.id]) !== null && _b !== void 0 ? _b : (sendData[_c] = { server: channel, userIds: [] });
-                sendData[channel.id].userIds.push(userId);
+                if (channel === undefined) {
+                    userData.unregisterNoticeList();
+                    console.log('delete', userId);
+                    continue;
+                }
+                else {
+                    console.log(userId);
+                    channel.guild.members.fetch(userId).catch(_ => {
+                        userData.unregisterNoticeList();
+                        console.log('delete', userId);
+                    });
+                    (_b = sendData[_c = channel.id]) !== null && _b !== void 0 ? _b : (sendData[_c] = { channel: channel, userIds: [] });
+                    sendData[channel.id].userIds.push(userId);
+                }
             }
             for (const key of Object.keys(sendData)) {
-                sendData[key].server.send(sendData[key].userIds.map(e => `<@${e}>`).join('') + 'リストの曲が流れるよ！');
+                sendData[key].channel.send(sendData[key].userIds.map(e => `<@${e}>`).join('') + 'リストの曲が流れるよ！');
             }
+            return Object.keys(userIds);
         });
     }
     registerNoticeList(playlistData, channelId) {
@@ -192,7 +203,7 @@ client.once('ready', () => {
                     type: 'SUB_COMMAND',
                     options: [{
                             type: 'STRING',
-                            name: 'list_url',
+                            name: 'url',
                             description: '追加するプレイリストのURL',
                             required: true
                         }]
@@ -223,7 +234,7 @@ client.once('ready', () => {
     (_c = client.application) === null || _c === void 0 ? void 0 : _c.commands.set(data, (_d = process.env.TEST_SERVER_ID) !== null && _d !== void 0 ? _d : '');
 });
 client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c, _d, _e, _f, _g, _h;
+    var _b, _c, _d, _e, _f, _g;
     if (!interaction.channel)
         return;
     if (!interaction.isCommand() || interaction.commandName !== 'ib')
@@ -276,7 +287,10 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             }
             case 'register': {
                 replyManager.standby({ ephemeral: true });
-                const [listId] = (_f = (_e = interaction.options.getString('list_url')) === null || _e === void 0 ? void 0 : _e.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/)) !== null && _f !== void 0 ? _f : [];
+                const url = interaction.options.getString('url');
+                const [listId] = (_e = url.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/)) !== null && _e !== void 0 ? _e : [];
+                if (!listId)
+                    throw new Error('URLが正しくありません！`https://kiite.jp/playlist/`で始まるURLを入力してください！');
                 const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId });
                 if (songListData.status === 'failed')
                     throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
@@ -324,9 +338,9 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                 break;
             }
             case 'unregister': {
-                const target = (_g = interaction.options.getUser('target')) !== null && _g !== void 0 ? _g : interaction.user;
+                const target = (_f = interaction.options.getUser('target')) !== null && _f !== void 0 ? _f : interaction.user;
                 const myself = target.id === interaction.user.id;
-                if (!myself && !((_h = interaction.memberPermissions) === null || _h === void 0 ? void 0 : _h.has('MANAGE_CHANNELS'))) {
+                if (!myself && !((_g = interaction.memberPermissions) === null || _g === void 0 ? void 0 : _g.has('MANAGE_CHANNELS'))) {
                     replyManager.standby({ ephemeral: true });
                     throw Error('指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
                 }
