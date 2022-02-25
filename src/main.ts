@@ -99,10 +99,34 @@ class UserDataClass {
     }
 }
 
+class ResponseIntetaction {
+    #interaction: discord.CommandInteraction<discord.CacheType>;
+    #options: discord.InteractionDeferReplyOptions | undefined;
+    #timeout: ReturnType<typeof setTimeout> | undefined;
+
+    constructor (interaction: discord.CommandInteraction<discord.CacheType>) {
+        this.#interaction = interaction;
+    }
+
+    standby (options?: discord.InteractionDeferReplyOptions) {
+        this.#options = options;
+        this.#timeout = setTimeout(() => this.#interaction.deferReply(options), 2e3);
+    }
+
+    reply (options: discord.WebhookEditMessageOptions) {
+        if (this.#interaction.replied || this.#interaction.deferred) {
+            return this.#interaction.editReply(options);
+        } else {
+            if (this.#timeout !== undefined) clearTimeout(this.#timeout);
+            return this.#interaction.reply({ ...options, ...this.#options });
+        }
+    }
+}
+
 client.once('ready', () => {
     console.log('Ready!');
     console.log(client.user?.tag);
-    observeNextSong('/api/cafe/now_playing');
+    observeNextSong();
 
     const data: Array<discord.ApplicationCommandDataResolvable> = [{
         name: 'ib',
@@ -153,128 +177,131 @@ client.once('ready', () => {
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.channel) return;
-    if (!(interaction.isButton() || interaction.isCommand())) return;
-
+    if (!interaction.isCommand() || interaction.commandName !== 'ib') return;
+    const replyManager = new ResponseIntetaction(interaction);
     try {
-        if (interaction.isCommand() && interaction.commandName === 'ib') {
-            switch (interaction.options.getSubcommand()) {
-            case 'now': {
-                const cafeNowP = KiiteAPI.getAPI('/api/cafe/user_count');
-                const nowSong = await KiiteAPI.getAPI('/api/cafe/now_playing');
-                const rotateData = await KiiteAPI.getAPI('/api/cafe/rotate_users', { ids: nowSong.id.toString() });
-                const artistData = await KiiteAPI.getAPI('/api/artist/id', { artist_id: nowSong.artist_id });
-
-                interaction.reply({
-                    embeds: [{
-                        title: nowSong.title,
-                        url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
-                        author: {
-                            name: nowSong.baseinfo.user_nickname,
-                            icon_url: nowSong.baseinfo.user_icon_url,
-                            url: 'https://kiite.jp/creator/' + artistData?.creator_id ?? ''
+        switch (interaction.options.getSubcommand()) {
+        case 'now': {
+            replyManager.standby({ ephemeral: true });
+            const cafeNowP = KiiteAPI.getAPI('/api/cafe/user_count');
+            const nowSong = await KiiteAPI.getAPI('/api/cafe/now_playing');
+            const rotateData = await KiiteAPI.getAPI('/api/cafe/rotate_users', { ids: nowSong.id.toString() });
+            const artistData = await KiiteAPI.getAPI('/api/artist/id', { artist_id: nowSong.artist_id });
+            await replyManager.reply({
+                embeds: [{
+                    title: nowSong.title,
+                    url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
+                    author: {
+                        name: nowSong.baseinfo.user_nickname,
+                        icon_url: nowSong.baseinfo.user_icon_url,
+                        url: 'https://kiite.jp/creator/' + artistData?.creator_id ?? ''
+                    },
+                    thumbnail: { url: nowSong.thumbnail },
+                    color: nowSong.colors[0],
+                    fields: [
+                        {
+                            name: makeStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),
+                            value: `${msTommss(Date.now() - Date.parse(nowSong.start_time))} / ${msTommss(nowSong.msec_duration)}`,
+                            inline: false
                         },
-                        thumbnail: { url: nowSong.thumbnail },
-                        color: nowSong.colors[0],
-                        fields: [
-                            {
-                                name: makeStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),
-                                value: `${msTommss(Date.now() - Date.parse(nowSong.start_time))} / ${msTommss(nowSong.msec_duration)}`,
-                                inline: false
-                            },
-                            {
-                                name: ':arrow_forward:再生数',
-                                value: Number(nowSong.baseinfo.view_counter).toLocaleString('ja'),
-                                inline: true
-                            },
-                            {
-                                name: ':busts_in_silhouette:Cafe内の人数',
-                                value: (await cafeNowP).toLocaleString('ja'),
-                                inline: true
-                            },
-                            {
-                                name: ':arrows_counterclockwise:回転数',
-                                value: (rotateData[nowSong.id]?.length ?? 0).toLocaleString('ja'),
-                                inline: true
-                            }
-                        ]
-                    }],
-                    ephemeral: true
-                });
-                break;
-            }
-            case 'register': {
-                const [listId] = interaction.options.getString('list_url')?.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
-                const songListData = await KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId });
-                if (songListData.status === 'failed') throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
+                        {
+                            name: ':arrow_forward:再生数',
+                            value: Number(nowSong.baseinfo.view_counter).toLocaleString('ja'),
+                            inline: true
+                        },
+                        {
+                            name: ':busts_in_silhouette:Cafe内の人数',
+                            value: (await cafeNowP).toLocaleString('ja'),
+                            inline: true
+                        },
+                        {
+                            name: ':arrows_counterclockwise:回転数',
+                            value: (rotateData[nowSong.id]?.length ?? 0).toLocaleString('ja'),
+                            inline: true
+                        }
+                    ]
+                }]
+            });
+            break;
+        }
+        case 'register': {
+            replyManager.standby({ ephemeral: true });
+            const [listId] = interaction.options.getString('list_url')?.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
+            const songListData = await KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId });
+            if (songListData.status === 'failed') throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 
-                const userData = new UserDataClass(interaction.user.id);
-                await userData.registerNoticeList(songListData, interaction.channelId);
+            const userData = new UserDataClass(interaction.user.id);
+            await userData.registerNoticeList(songListData, interaction.channelId);
 
-                interaction.reply({
-                    content: '以下のリストを通知リストとして登録しました！',
-                    embeds: [{
-                        title: songListData.list_title,
-                        url: `https://kiite.jp/playlist/${songListData.list_id}`,
-                        description: `**全${songListData.songs.length}曲**\n${songListData.description}`,
-                        footer: { text: `最終更新: ${songListData.updated_at}` }
-                    }],
-                    ephemeral: true
-                });
-                break;
-            }
-            case 'list': {
-                const userData = new UserDataClass(interaction.user.id);
-                const registeredList = await userData.getRegisteredList();
+            await replyManager.reply({
+                content: '以下のリストを通知リストとして登録しました！',
+                embeds: [{
+                    title: songListData.list_title,
+                    url: `https://kiite.jp/playlist/${songListData.list_id}`,
+                    description: `**全${songListData.songs.length}曲**\n${songListData.description}`,
+                    footer: { text: `最終更新: ${songListData.updated_at}` }
+                }]
+            });
+            break;
+        }
+        case 'list': {
+            replyManager.standby({ ephemeral: true });
+            const userData = new UserDataClass(interaction.user.id);
+            const registeredList = await userData.getRegisteredList();
 
-                interaction.reply({
-                    content: '以下のリストが通知リストとして登録されています！',
-                    embeds: [{
-                        title: `${registeredList.list_title}`,
-                        url: `https://kiite.jp/playlist/${registeredList.list_id}`,
-                        description: `**全${registeredList.songs.length}曲**\n${registeredList.description}`,
-                        footer: { text: `最終更新: ${registeredList.updated_at}` }
-                    }],
-                    ephemeral: true
-                });
-                break;
-            }
-            case 'update': {
-                const userData = new UserDataClass(interaction.user.id);
-                const songListData = await userData.updateNoticeList(interaction.channelId);
+            replyManager.reply({
+                content: '以下のリストが通知リストとして登録されています！',
+                embeds: [{
+                    title: `${registeredList.list_title}`,
+                    url: `https://kiite.jp/playlist/${registeredList.list_id}`,
+                    description: `**全${registeredList.songs.length}曲**\n${registeredList.description}`,
+                    footer: { text: `最終更新: ${registeredList.updated_at}` }
+                }]
+            });
+            break;
+        }
+        case 'update': {
+            replyManager.standby({ ephemeral: true });
+            const userData = new UserDataClass(interaction.user.id);
+            const songListData = await userData.updateNoticeList(interaction.channelId);
 
-                interaction.reply({
-                    content: '以下のリストから通知リストを更新しました！',
-                    embeds: [{
-                        title: songListData.list_title,
-                        url: `https://kiite.jp/playlist/${songListData.list_id}`,
-                        description: `**全${songListData.songs.length}曲**\n${songListData.description}`,
-                        footer: { text: `最終更新: ${songListData.updated_at}` }
-                    }],
-                    ephemeral: true
-                });
-                break;
+            replyManager.reply({
+                content: '以下のリストから通知リストを更新しました！',
+                embeds: [{
+                    title: songListData.list_title,
+                    url: `https://kiite.jp/playlist/${songListData.list_id}`,
+                    description: `**全${songListData.songs.length}曲**\n${songListData.description}`,
+                    footer: { text: `最終更新: ${songListData.updated_at}` }
+                }]
+            });
+            break;
+        }
+        case 'unregister': {
+            const target = interaction.options.getUser('target') ?? interaction.user;
+            const myself = target.id === interaction.user.id;
+            if (!myself && !interaction.memberPermissions?.has('MANAGE_CHANNELS')) {
+                replyManager.standby({ ephemeral: true });
+                throw Error('指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
             }
-            case 'unregister': {
-                const target = interaction.options.getUser('target') ?? interaction.user;
-                if (target.id !== interaction.user.id && !interaction.memberPermissions?.has('MANAGE_CHANNELS')) throw Error('自分以外のユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
+            replyManager.standby(myself ? { ephemeral: true } : undefined);
 
-                const userData = new UserDataClass(target.id);
-                await userData.unregisterNoticeList();
+            const userData = new UserDataClass(target.id);
+            await userData.unregisterNoticeList();
 
-                interaction.reply(`<@${target.id}>のリストの登録を解除しました！`);
-            }
-            }
+            replyManager.reply({
+                content: myself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
+            });
+        }
         }
     } catch (e) {
         if (e instanceof Error) {
-            interaction.reply({
+            replyManager.reply({
                 embeds: [{
                     title: e.name,
                     description: e.message,
                     color: '#ff0000'
-                }],
-                ephemeral: true
-            });
+                }]
+            }).catch(e => console.error(e));
         } else {
             console.error(e);
         }
@@ -302,19 +329,24 @@ function msTommss (ms: number) {
     return `${ms / 60e3 | 0}:${((ms / 1e3 | 0) % 60).toString().padStart(2, '0')}`;
 }
 
-async function observeNextSong (apiUrl: '/api/cafe/now_playing' | '/api/cafe/next_song') {
-    try {
-        const nextSong = await KiiteAPI.getAPI(apiUrl);
-        const nowTime = new Date().getTime();
-        const startTime = new Date(nextSong.start_time).getTime();
-        const msecDuration = Math.min(nextSong.msec_duration, 480e3);
+async function observeNextSong () {
+    let getNext: boolean = false;
+    while (true) {
+        try {
+            const apiUrl = (getNext ? '/api/cafe/next_song' : '/api/cafe/now_playing') as '/api/cafe/now_playing' | '/api/cafe/next_song';
+            const cafeSongData = await KiiteAPI.getAPI(apiUrl);
+            const nowTime = new Date().getTime();
+            const startTime = new Date(cafeSongData.start_time).getTime();
+            const endTime = startTime + Math.min(cafeSongData.msec_duration, 480e3);
 
-        UserDataClass.noticeSong(nextSong.video_id);
-
-        setTimeout(() => client.user?.setActivity({ name: nextSong.title, type: 'LISTENING' }), startTime - nowTime);
-        setTimeout(observeNextSong.bind(null, '/api/cafe/next_song'), Math.max(startTime + msecDuration - 60e3 - nowTime, 3e3));
-    } catch (e) {
-        setTimeout(observeNextSong.bind(null, '/api/cafe/next_song'), 15e3);
+            UserDataClass.noticeSong(cafeSongData.video_id);
+            setTimeout(() => client.user?.setActivity({ name: cafeSongData.title, type: 'LISTENING' }), Math.max(startTime - nowTime, 0));
+            if (getNext) await new Promise(resolve => setTimeout(resolve, Math.max(endTime - 60e3 - nowTime, 3e3)));
+            getNext = new Date().getTime() < endTime;
+        } catch (e) {
+            console.error(e);
+            await new Promise(resolve => setTimeout(resolve, 15e3));
+        }
     }
 }
 

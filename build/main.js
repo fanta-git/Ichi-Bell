@@ -41,7 +41,7 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var _a, _UserDataClass_noticeList, _UserDataClass_userData, _UserDataClass_database, _UserDataClass_userId;
+var _a, _UserDataClass_noticeList, _UserDataClass_userData, _UserDataClass_database, _UserDataClass_userId, _ResponseIntetaction_interaction, _ResponseIntetaction_options, _ResponseIntetaction_timeout;
 Object.defineProperty(exports, "__esModule", { value: true });
 const discord = __importStar(require("discord.js"));
 const KiiteAPI = __importStar(require("./KiiteAPI"));
@@ -149,11 +149,34 @@ class UserDataClass {
 _a = UserDataClass, _UserDataClass_database = new WeakMap(), _UserDataClass_userId = new WeakMap();
 _UserDataClass_noticeList = { value: new keyv_1.default('sqlite://db.sqlite', { table: 'noticeList' }) };
 _UserDataClass_userData = { value: new keyv_1.default('sqlite://db.sqlite', { table: 'userData' }) };
+class ResponseIntetaction {
+    constructor(interaction) {
+        _ResponseIntetaction_interaction.set(this, void 0);
+        _ResponseIntetaction_options.set(this, void 0);
+        _ResponseIntetaction_timeout.set(this, void 0);
+        __classPrivateFieldSet(this, _ResponseIntetaction_interaction, interaction, "f");
+    }
+    standby(options) {
+        __classPrivateFieldSet(this, _ResponseIntetaction_options, options, "f");
+        __classPrivateFieldSet(this, _ResponseIntetaction_timeout, setTimeout(() => __classPrivateFieldGet(this, _ResponseIntetaction_interaction, "f").deferReply(options), 2e3), "f");
+    }
+    reply(options) {
+        if (__classPrivateFieldGet(this, _ResponseIntetaction_interaction, "f").replied || __classPrivateFieldGet(this, _ResponseIntetaction_interaction, "f").deferred) {
+            return __classPrivateFieldGet(this, _ResponseIntetaction_interaction, "f").editReply(options);
+        }
+        else {
+            if (__classPrivateFieldGet(this, _ResponseIntetaction_timeout, "f") !== undefined)
+                clearTimeout(__classPrivateFieldGet(this, _ResponseIntetaction_timeout, "f"));
+            return __classPrivateFieldGet(this, _ResponseIntetaction_interaction, "f").reply(Object.assign(Object.assign({}, options), __classPrivateFieldGet(this, _ResponseIntetaction_options, "f")));
+        }
+    }
+}
+_ResponseIntetaction_interaction = new WeakMap(), _ResponseIntetaction_options = new WeakMap(), _ResponseIntetaction_timeout = new WeakMap();
 client.once('ready', () => {
     var _b, _c, _d;
     console.log('Ready!');
     console.log((_b = client.user) === null || _b === void 0 ? void 0 : _b.tag);
-    observeNextSong('/api/cafe/now_playing');
+    observeNextSong();
     const data = [{
             name: 'ib',
             description: 'KiiteCafeでの選曲を通知します',
@@ -203,124 +226,128 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
     var _b, _c, _d, _e, _f, _g, _h;
     if (!interaction.channel)
         return;
-    if (!(interaction.isButton() || interaction.isCommand()))
+    if (!interaction.isCommand() || interaction.commandName !== 'ib')
         return;
+    const replyManager = new ResponseIntetaction(interaction);
     try {
-        if (interaction.isCommand() && interaction.commandName === 'ib') {
-            switch (interaction.options.getSubcommand()) {
-                case 'now': {
-                    const cafeNowP = KiiteAPI.getAPI('/api/cafe/user_count');
-                    const nowSong = yield KiiteAPI.getAPI('/api/cafe/now_playing');
-                    const rotateData = yield KiiteAPI.getAPI('/api/cafe/rotate_users', { ids: nowSong.id.toString() });
-                    const artistData = yield KiiteAPI.getAPI('/api/artist/id', { artist_id: nowSong.artist_id });
-                    interaction.reply({
-                        embeds: [{
-                                title: nowSong.title,
-                                url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
-                                author: {
-                                    name: nowSong.baseinfo.user_nickname,
-                                    icon_url: nowSong.baseinfo.user_icon_url,
-                                    url: (_b = 'https://kiite.jp/creator/' + (artistData === null || artistData === void 0 ? void 0 : artistData.creator_id)) !== null && _b !== void 0 ? _b : ''
+        switch (interaction.options.getSubcommand()) {
+            case 'now': {
+                replyManager.standby({ ephemeral: true });
+                const cafeNowP = KiiteAPI.getAPI('/api/cafe/user_count');
+                const nowSong = yield KiiteAPI.getAPI('/api/cafe/now_playing');
+                const rotateData = yield KiiteAPI.getAPI('/api/cafe/rotate_users', { ids: nowSong.id.toString() });
+                const artistData = yield KiiteAPI.getAPI('/api/artist/id', { artist_id: nowSong.artist_id });
+                yield replyManager.reply({
+                    embeds: [{
+                            title: nowSong.title,
+                            url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
+                            author: {
+                                name: nowSong.baseinfo.user_nickname,
+                                icon_url: nowSong.baseinfo.user_icon_url,
+                                url: (_b = 'https://kiite.jp/creator/' + (artistData === null || artistData === void 0 ? void 0 : artistData.creator_id)) !== null && _b !== void 0 ? _b : ''
+                            },
+                            thumbnail: { url: nowSong.thumbnail },
+                            color: nowSong.colors[0],
+                            fields: [
+                                {
+                                    name: makeStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),
+                                    value: `${msTommss(Date.now() - Date.parse(nowSong.start_time))} / ${msTommss(nowSong.msec_duration)}`,
+                                    inline: false
                                 },
-                                thumbnail: { url: nowSong.thumbnail },
-                                color: nowSong.colors[0],
-                                fields: [
-                                    {
-                                        name: makeStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),
-                                        value: `${msTommss(Date.now() - Date.parse(nowSong.start_time))} / ${msTommss(nowSong.msec_duration)}`,
-                                        inline: false
-                                    },
-                                    {
-                                        name: ':arrow_forward:再生数',
-                                        value: Number(nowSong.baseinfo.view_counter).toLocaleString('ja'),
-                                        inline: true
-                                    },
-                                    {
-                                        name: ':busts_in_silhouette:Cafe内の人数',
-                                        value: (yield cafeNowP).toLocaleString('ja'),
-                                        inline: true
-                                    },
-                                    {
-                                        name: ':arrows_counterclockwise:回転数',
-                                        value: ((_d = (_c = rotateData[nowSong.id]) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0).toLocaleString('ja'),
-                                        inline: true
-                                    }
-                                ]
-                            }],
-                        ephemeral: true
-                    });
-                    break;
+                                {
+                                    name: ':arrow_forward:再生数',
+                                    value: Number(nowSong.baseinfo.view_counter).toLocaleString('ja'),
+                                    inline: true
+                                },
+                                {
+                                    name: ':busts_in_silhouette:Cafe内の人数',
+                                    value: (yield cafeNowP).toLocaleString('ja'),
+                                    inline: true
+                                },
+                                {
+                                    name: ':arrows_counterclockwise:回転数',
+                                    value: ((_d = (_c = rotateData[nowSong.id]) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0).toLocaleString('ja'),
+                                    inline: true
+                                }
+                            ]
+                        }]
+                });
+                break;
+            }
+            case 'register': {
+                replyManager.standby({ ephemeral: true });
+                const [listId] = (_f = (_e = interaction.options.getString('list_url')) === null || _e === void 0 ? void 0 : _e.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/)) !== null && _f !== void 0 ? _f : [];
+                const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId });
+                if (songListData.status === 'failed')
+                    throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
+                const userData = new UserDataClass(interaction.user.id);
+                yield userData.registerNoticeList(songListData, interaction.channelId);
+                yield replyManager.reply({
+                    content: '以下のリストを通知リストとして登録しました！',
+                    embeds: [{
+                            title: songListData.list_title,
+                            url: `https://kiite.jp/playlist/${songListData.list_id}`,
+                            description: `**全${songListData.songs.length}曲**\n${songListData.description}`,
+                            footer: { text: `最終更新: ${songListData.updated_at}` }
+                        }]
+                });
+                break;
+            }
+            case 'list': {
+                replyManager.standby({ ephemeral: true });
+                const userData = new UserDataClass(interaction.user.id);
+                const registeredList = yield userData.getRegisteredList();
+                replyManager.reply({
+                    content: '以下のリストが通知リストとして登録されています！',
+                    embeds: [{
+                            title: `${registeredList.list_title}`,
+                            url: `https://kiite.jp/playlist/${registeredList.list_id}`,
+                            description: `**全${registeredList.songs.length}曲**\n${registeredList.description}`,
+                            footer: { text: `最終更新: ${registeredList.updated_at}` }
+                        }]
+                });
+                break;
+            }
+            case 'update': {
+                replyManager.standby({ ephemeral: true });
+                const userData = new UserDataClass(interaction.user.id);
+                const songListData = yield userData.updateNoticeList(interaction.channelId);
+                replyManager.reply({
+                    content: '以下のリストから通知リストを更新しました！',
+                    embeds: [{
+                            title: songListData.list_title,
+                            url: `https://kiite.jp/playlist/${songListData.list_id}`,
+                            description: `**全${songListData.songs.length}曲**\n${songListData.description}`,
+                            footer: { text: `最終更新: ${songListData.updated_at}` }
+                        }]
+                });
+                break;
+            }
+            case 'unregister': {
+                const target = (_g = interaction.options.getUser('target')) !== null && _g !== void 0 ? _g : interaction.user;
+                const myself = target.id === interaction.user.id;
+                if (!myself && !((_h = interaction.memberPermissions) === null || _h === void 0 ? void 0 : _h.has('MANAGE_CHANNELS'))) {
+                    replyManager.standby({ ephemeral: true });
+                    throw Error('指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
                 }
-                case 'register': {
-                    const [listId] = (_f = (_e = interaction.options.getString('list_url')) === null || _e === void 0 ? void 0 : _e.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/)) !== null && _f !== void 0 ? _f : [];
-                    const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId });
-                    if (songListData.status === 'failed')
-                        throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
-                    const userData = new UserDataClass(interaction.user.id);
-                    yield userData.registerNoticeList(songListData, interaction.channelId);
-                    interaction.reply({
-                        content: '以下のリストを通知リストとして登録しました！',
-                        embeds: [{
-                                title: songListData.list_title,
-                                url: `https://kiite.jp/playlist/${songListData.list_id}`,
-                                description: `**全${songListData.songs.length}曲**\n${songListData.description}`,
-                                footer: { text: `最終更新: ${songListData.updated_at}` }
-                            }],
-                        ephemeral: true
-                    });
-                    break;
-                }
-                case 'list': {
-                    const userData = new UserDataClass(interaction.user.id);
-                    const registeredList = yield userData.getRegisteredList();
-                    interaction.reply({
-                        content: '以下のリストが通知リストとして登録されています！',
-                        embeds: [{
-                                title: `${registeredList.list_title}`,
-                                url: `https://kiite.jp/playlist/${registeredList.list_id}`,
-                                description: `**全${registeredList.songs.length}曲**\n${registeredList.description}`,
-                                footer: { text: `最終更新: ${registeredList.updated_at}` }
-                            }],
-                        ephemeral: true
-                    });
-                    break;
-                }
-                case 'update': {
-                    const userData = new UserDataClass(interaction.user.id);
-                    const songListData = yield userData.updateNoticeList(interaction.channelId);
-                    interaction.reply({
-                        content: '以下のリストから通知リストを更新しました！',
-                        embeds: [{
-                                title: songListData.list_title,
-                                url: `https://kiite.jp/playlist/${songListData.list_id}`,
-                                description: `**全${songListData.songs.length}曲**\n${songListData.description}`,
-                                footer: { text: `最終更新: ${songListData.updated_at}` }
-                            }],
-                        ephemeral: true
-                    });
-                    break;
-                }
-                case 'unregister': {
-                    const target = (_g = interaction.options.getUser('target')) !== null && _g !== void 0 ? _g : interaction.user;
-                    if (target.id !== interaction.user.id && !((_h = interaction.memberPermissions) === null || _h === void 0 ? void 0 : _h.has('MANAGE_CHANNELS')))
-                        throw Error('自分以外のユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
-                    const userData = new UserDataClass(target.id);
-                    yield userData.unregisterNoticeList();
-                    interaction.reply(`<@${target.id}>のリストの登録を解除しました！`);
-                }
+                replyManager.standby(myself ? { ephemeral: true } : undefined);
+                const userData = new UserDataClass(target.id);
+                yield userData.unregisterNoticeList();
+                replyManager.reply({
+                    content: myself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
+                });
             }
         }
     }
     catch (e) {
         if (e instanceof Error) {
-            interaction.reply({
+            replyManager.reply({
                 embeds: [{
                         title: e.name,
                         description: e.message,
                         color: '#ff0000'
-                    }],
-                ephemeral: true
-            });
+                    }]
+            }).catch(e => console.error(e));
         }
         else {
             console.error(e);
@@ -348,19 +375,26 @@ function makeStatusbar(nowPoint, endPoint, length) {
 function msTommss(ms) {
     return `${ms / 60e3 | 0}:${((ms / 1e3 | 0) % 60).toString().padStart(2, '0')}`;
 }
-function observeNextSong(apiUrl) {
+function observeNextSong() {
     return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const nextSong = yield KiiteAPI.getAPI(apiUrl);
-            const nowTime = new Date().getTime();
-            const startTime = new Date(nextSong.start_time).getTime();
-            const msecDuration = Math.min(nextSong.msec_duration, 480e3);
-            UserDataClass.noticeSong(nextSong.video_id);
-            setTimeout(() => { var _b; return (_b = client.user) === null || _b === void 0 ? void 0 : _b.setActivity({ name: nextSong.title, type: 'LISTENING' }); }, startTime - nowTime);
-            setTimeout(observeNextSong.bind(null, '/api/cafe/next_song'), Math.max(startTime + msecDuration - 60e3 - nowTime, 3e3));
-        }
-        catch (e) {
-            setTimeout(observeNextSong.bind(null, '/api/cafe/next_song'), 15e3);
+        let getNext = false;
+        while (true) {
+            try {
+                const apiUrl = (getNext ? '/api/cafe/next_song' : '/api/cafe/now_playing');
+                const cafeSongData = yield KiiteAPI.getAPI(apiUrl);
+                const nowTime = new Date().getTime();
+                const startTime = new Date(cafeSongData.start_time).getTime();
+                const endTime = startTime + Math.min(cafeSongData.msec_duration, 480e3);
+                UserDataClass.noticeSong(cafeSongData.video_id);
+                setTimeout(() => { var _b; return (_b = client.user) === null || _b === void 0 ? void 0 : _b.setActivity({ name: cafeSongData.title, type: 'LISTENING' }); }, Math.max(startTime - nowTime, 0));
+                if (getNext)
+                    yield new Promise(resolve => setTimeout(resolve, Math.max(endTime - 60e3 - nowTime, 3e3)));
+                getNext = new Date().getTime() < endTime;
+            }
+            catch (e) {
+                console.error(e);
+                yield new Promise(resolve => setTimeout(resolve, 15e3));
+            }
         }
     });
 }

@@ -150,11 +150,12 @@ export type FuncAPI = {
 
 export const getAPI: FuncAPI = async (url, queryParam = {}) => {
     const now = new Date();
-    const stc = getAPI.staticVariable ??= { apiCallHist: new Array<number>(5).fill(0) };
+    const stc = getAPI.staticVariable ??= { apiCallHist: new Array<number>(4).fill(0) };
     const waitTime = Math.max(stc.apiCallHist[0] + 1e3 - now.getTime(), 0);
     stc.apiCallHist.shift();
     stc.apiCallHist.push(now.getTime() + waitTime);
     if (waitTime) await new Promise(resolve => setTimeout(resolve, waitTime));
+    console.log(new Date(), 'APIを呼び出しました');
 
     const { error, response, body } = await new Promise(resolve =>
         request(
@@ -168,8 +169,6 @@ export const getAPI: FuncAPI = async (url, queryParam = {}) => {
     if (response.statusCode === 200) {
         return body;
     } else {
-        console.error('APIの読み込みに失敗しました');
-        console.error(new Error(error));
         throw new Error(error);
     }
 };
