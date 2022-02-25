@@ -1,9 +1,13 @@
 import * as discord from 'discord.js';
 import * as KiiteAPI from './KiiteAPI';
 import Keyv from 'keyv';
+import log4js from 'log4js';
 require('dotenv').config();
 
 const client = new discord.Client({ intents: ['GUILDS'] });
+const logger = log4js.getLogger('main');
+const errorlog = log4js.getLogger('main');
+log4js.configure('./log-config.json');
 
 type noticeListContents = Record<string, string> | undefined;
 type userDataContents = {
@@ -34,13 +38,12 @@ class UserDataClass {
             const channel = await userData.getChannel();
             if (channel === undefined) {
                 userData.unregisterNoticeList();
-                console.log('delete', userId);
+                logger.info('delete', userId);
                 continue;
             } else {
-                console.log(userId);
                 channel.guild.members.fetch(userId).catch(_ => {
                     userData.unregisterNoticeList();
-                    console.log('delete', userId);
+                    logger.info('delete', userId);
                 });
                 sendData[channel.id] ??= { channel: channel, userIds: [] };
                 sendData[channel.id].userIds.push(userId);
@@ -135,8 +138,7 @@ class ResponseIntetaction {
 }
 
 client.once('ready', () => {
-    console.log('Ready!');
-    console.log(client.user?.tag);
+    logger.info(client.user?.tag + ' Ready!');
     observeNextSong();
 
     const data: Array<discord.ApplicationCommandDataResolvable> = [{
@@ -314,9 +316,9 @@ client.on('interactionCreate', async (interaction) => {
                     description: e.message,
                     color: '#ff0000'
                 }]
-            }).catch(e => console.error(e));
+            }).catch(e => errorlog.error(e));
         } else {
-            console.error(e);
+            errorlog.error(e);
         }
     }
 });
@@ -357,7 +359,7 @@ async function observeNextSong () {
             if (getNext) await new Promise(resolve => setTimeout(resolve, Math.max(endTime - 60e3 - nowTime, 3e3)));
             getNext = new Date().getTime() < endTime;
         } catch (e) {
-            console.error(e);
+            errorlog.error(e);
             await new Promise(resolve => setTimeout(resolve, 15e3));
         }
     }

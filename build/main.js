@@ -46,8 +46,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const discord = __importStar(require("discord.js"));
 const KiiteAPI = __importStar(require("./KiiteAPI"));
 const keyv_1 = __importDefault(require("keyv"));
+const log4js_1 = __importDefault(require("log4js"));
 require('dotenv').config();
 const client = new discord.Client({ intents: ['GUILDS'] });
+const logger = log4js_1.default.getLogger('main');
+const errorlog = log4js_1.default.getLogger('main');
+log4js_1.default.configure('./log-config.json');
 class UserDataClass {
     constructor(userId) {
         _UserDataClass_database.set(this, void 0);
@@ -68,14 +72,13 @@ class UserDataClass {
                 const channel = yield userData.getChannel();
                 if (channel === undefined) {
                     userData.unregisterNoticeList();
-                    console.log('delete', userId);
+                    logger.info('delete', userId);
                     continue;
                 }
                 else {
-                    console.log(userId);
                     channel.guild.members.fetch(userId).catch(_ => {
                         userData.unregisterNoticeList();
-                        console.log('delete', userId);
+                        logger.info('delete', userId);
                     });
                     (_b = sendData[_c = channel.id]) !== null && _b !== void 0 ? _b : (sendData[_c] = { channel: channel, userIds: [] });
                     sendData[channel.id].userIds.push(userId);
@@ -185,8 +188,7 @@ class ResponseIntetaction {
 _ResponseIntetaction_interaction = new WeakMap(), _ResponseIntetaction_options = new WeakMap(), _ResponseIntetaction_timeout = new WeakMap();
 client.once('ready', () => {
     var _b, _c, _d;
-    console.log('Ready!');
-    console.log((_b = client.user) === null || _b === void 0 ? void 0 : _b.tag);
+    logger.info(((_b = client.user) === null || _b === void 0 ? void 0 : _b.tag) + ' Ready!');
     observeNextSong();
     const data = [{
             name: 'ib',
@@ -361,10 +363,10 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                         description: e.message,
                         color: '#ff0000'
                     }]
-            }).catch(e => console.error(e));
+            }).catch(e => errorlog.error(e));
         }
         else {
-            console.error(e);
+            errorlog.error(e);
         }
     }
 }));
@@ -406,7 +408,7 @@ function observeNextSong() {
                 getNext = new Date().getTime() < endTime;
             }
             catch (e) {
-                console.error(e);
+                errorlog.error(e);
                 yield new Promise(resolve => setTimeout(resolve, 15e3));
             }
         }

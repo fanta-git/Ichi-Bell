@@ -1,0 +1,24 @@
+{
+    "appenders": {
+        "console": {
+            "type": "console",
+            "level": "all"
+        },
+        "error": {
+            "type": "file",
+            "filename": "./log/errors.log"
+        }
+    },
+    "categories": {
+        "default": {
+            "appenders": ["console"],
+            "level": "all",
+            "enableCallStack": true
+        },
+        "unknownerror": {
+            "appenders": ["error"],
+            "level": "error",
+            "enableCallStack": true
+        }
+    }
+}

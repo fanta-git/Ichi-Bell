@@ -1,5 +1,10 @@
 /* eslint-disable camelcase */
 import request from 'request';
+import log4js from 'log4js';
+
+const logger = log4js.getLogger('KiiteAPI');
+const errlog = log4js.getLogger('error');
+log4js.configure('./log-config.json');
 
 export type User = {
     id: null,
@@ -155,7 +160,7 @@ export const getAPI: FuncAPI = async (url, queryParam = {}) => {
     stc.apiCallHist.shift();
     stc.apiCallHist.push(now.getTime() + waitTime);
     if (waitTime) await new Promise(resolve => setTimeout(resolve, waitTime));
-    console.log(new Date(), 'APIを呼び出しました');
+    logger.info('APIを呼び出しました');
 
     const { error, response, body } = await new Promise(resolve =>
         request(
@@ -169,6 +174,7 @@ export const getAPI: FuncAPI = async (url, queryParam = {}) => {
     if (response.statusCode === 200) {
         return body;
     } else {
+        errlog.error(response);
         throw new Error(error);
     }
 };
