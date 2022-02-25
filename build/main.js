@@ -187,7 +187,7 @@ class ResponseIntetaction {
 }
 _ResponseIntetaction_interaction = new WeakMap(), _ResponseIntetaction_options = new WeakMap(), _ResponseIntetaction_timeout = new WeakMap();
 client.once('ready', () => {
-    var _b, _c, _d;
+    var _b, _c;
     logger.info(((_b = client.user) === null || _b === void 0 ? void 0 : _b.tag) + ' Ready!');
     observeNextSong();
     const data = [{
@@ -233,7 +233,7 @@ client.once('ready', () => {
                 }
             ]
         }];
-    (_c = client.application) === null || _c === void 0 ? void 0 : _c.commands.set(data, (_d = process.env.TEST_SERVER_ID) !== null && _d !== void 0 ? _d : '');
+    (_c = client.application) === null || _c === void 0 ? void 0 : _c.commands.set(data);
 });
 client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0, function* () {
     var _b, _c, _d, _e, _f, _g;

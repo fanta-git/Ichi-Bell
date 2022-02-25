@@ -185,7 +185,7 @@ client.once('ready', () => {
         ]
     }];
 
-    client.application?.commands.set(data, process.env.TEST_SERVER_ID ?? '');
+    client.application?.commands.set(data);
 });
 
 client.on('interactionCreate', async (interaction) => {
