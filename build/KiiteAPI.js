@@ -35,11 +35,11 @@ const getAPI = (url, queryParam = {}) => __awaiter(void 0, void 0, void 0, funct
     const { error, response, body } = yield new Promise(resolve => (0, request_1.default)({ url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true, port: port }, (error, response, body) => {
         resolve(Object.assign({}, { error: error, response: response, body: body }));
     }));
-    if (response.statusCode === 200) {
+    if ((response === null || response === void 0 ? void 0 : response.statusCode) === 200) {
         return body;
     }
     else {
-        errlog.error(response);
+        errlog.error(error);
         throw new Error(error);
     }
 });

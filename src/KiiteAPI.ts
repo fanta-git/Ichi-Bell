@@ -174,10 +174,10 @@ export const getAPI: FuncAPI = async (url, queryParam = {}) => {
         )
     );
 
-    if (response.statusCode === 200) {
+    if (response?.statusCode === 200) {
         return body;
     } else {
-        errlog.error(response);
+        errlog.error(error);
         throw new Error(error);
     }
 };
