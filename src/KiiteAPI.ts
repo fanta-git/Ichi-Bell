@@ -1,10 +1,13 @@
 /* eslint-disable camelcase */
 import request from 'request';
 import log4js from 'log4js';
+require('dotenv').config();
 
 const logger = log4js.getLogger('KiiteAPI');
 const errlog = log4js.getLogger('error');
 log4js.configure('./log-config.json');
+
+const port = Number(process.env.POOT) ?? 5000;
 
 export type User = {
     id: null,
@@ -164,7 +167,7 @@ export const getAPI: FuncAPI = async (url, queryParam = {}) => {
 
     const { error, response, body } = await new Promise(resolve =>
         request(
-            { url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true },
+            { url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true, port: port },
             (error, response, body) => {
                 resolve(Object.assign({}, { error: error, response: response, body: body }));
             }
