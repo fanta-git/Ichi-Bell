@@ -13,6 +13,7 @@ type noticeListContents = Record<string, string> | undefined;
 type userDataContents = {
     registeredList: KiiteAPI.PlaylistContents | undefined,
     userId: string | undefined,
+    dm: boolean | undefined,
     channelId: string | undefined
 };
 
@@ -29,34 +30,42 @@ class UserDataClass {
     }
 
     static async noticeSong (songId: string): Promise<string[] | undefined> {
-        const userIds: Record<string, string> | undefined = await UserDataClass.#noticeList.get(songId);
-        const sendData: Record<string, { channel: discord.TextChannel, userIds: string[] }> = {};
+        const userIds = await UserDataClass.#noticeList.get(songId);
+        const forChannels: Record<string, { channel: discord.TextChannel, userIds: string[] }> = {};
+        const forDMs: discord.User[] = [];
         if (!userIds) return;
 
         for (const userId of Object.keys(userIds)) {
             const userData = new UserDataClass(userId);
-            const channel = await userData.getChannel();
-            if (channel === undefined) {
-                userData.unregisterNoticeList();
-                logger.info('delete', userId);
-                continue;
+            if (await userData.isDM()) {
+                const user = client.users.cache.get(userId);
+                if (user) forDMs.push(user);
             } else {
+                const channel = await userData.getChannel();
+                if (channel === undefined) {
+                    userData.unregisterNoticeList();
+                    logger.info('delete', userId);
+                    continue;
+                }
                 channel.guild.members.fetch(userId).catch(_ => {
                     userData.unregisterNoticeList();
                     logger.info('delete', userId);
                 });
-                sendData[channel.id] ??= { channel: channel, userIds: [] };
-                sendData[channel.id].userIds.push(userId);
+                forChannels[channel.id] ??= { channel: channel, userIds: [] };
+                forChannels[channel.id].userIds.push(userId);
             }
         }
 
-        for (const key of Object.keys(sendData)) {
-            sendData[key].channel.send(sendData[key].userIds.map(e => `<@${e}>`).join('') + 'リストの曲が流れるよ！');
+        for (const user of forDMs) {
+            user.send('リストの曲が流れるよ！');
+        }
+        for (const key of Object.keys(forChannels)) {
+            forChannels[key].channel.send(forChannels[key].userIds.map(e => `<@${e}>`).join('') + 'リストの曲が流れるよ！');
         }
         return Object.keys(userIds);
     }
 
-    async registerNoticeList (playlistData: KiiteAPI.PlaylistContents, channelId: string) {
+    async registerNoticeList (playlistData: KiiteAPI.PlaylistContents, channelId: string, dm: boolean) {
         const { userId } = await this.#database;
         if (userId) await this.unregisterNoticeList();
         for (const song of playlistData.songs) {
@@ -68,18 +77,19 @@ class UserDataClass {
         UserDataClass.#userData.set(this.#userId, {
             userId: this.#userId,
             channelId: channelId,
+            dm: dm,
             registeredList: playlistData
         });
         return true;
     }
 
-    async updateNoticeList (channelId: string) {
-        const { registeredList } = await this.#database;
+    async updateNoticeList (channelId: string, dm: boolean) {
+        const { registeredList, channelId: registedChannelId } = await this.#database;
         if (registeredList === undefined) throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
         const songListData = await KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
         if (songListData.status === 'failed') throw new Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
-        if (songListData.updated_at === registeredList.updated_at) throw new Error('プレイリストは最新の状態です！');
-        this.registerNoticeList(songListData, channelId);
+        if (registedChannelId === channelId && songListData.updated_at === registeredList.updated_at) throw new Error('プレイリストは最新の状態です！');
+        this.registerNoticeList(songListData, channelId, dm);
         return songListData;
     }
 
@@ -110,6 +120,11 @@ class UserDataClass {
         const { channelId } = await this.#database;
         if (channelId === undefined) return undefined;
         return client.channels.cache.get(channelId) as discord.TextChannel;
+    }
+
+    async isDM () {
+        const { dm } = await this.#database;
+        return dm;
     }
 }
 
@@ -189,7 +204,6 @@ client.once('ready', () => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-    if (!interaction.channel) return;
     if (!interaction.isCommand() || interaction.commandName !== 'ib') return;
     const replyManager = new ResponseIntetaction(interaction);
     try {
@@ -246,7 +260,7 @@ client.on('interactionCreate', async (interaction) => {
             if (songListData.status === 'failed') throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 
             const userData = new UserDataClass(interaction.user.id);
-            await userData.registerNoticeList(songListData, interaction.channelId);
+            await userData.registerNoticeList(songListData, interaction.channelId, !interaction.channel);
 
             await replyManager.reply({
                 content: '以下のリストを通知リストとして登録しました！',
@@ -278,7 +292,7 @@ client.on('interactionCreate', async (interaction) => {
         case 'update': {
             replyManager.standby({ ephemeral: true });
             const userData = new UserDataClass(interaction.user.id);
-            const songListData = await userData.updateNoticeList(interaction.channelId);
+            const songListData = await userData.updateNoticeList(interaction.channelId, !interaction.channel);
 
             replyManager.reply({
                 content: '以下のリストから通知リストを更新しました！',

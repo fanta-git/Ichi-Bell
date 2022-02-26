@@ -64,33 +64,42 @@ class UserDataClass {
         var _c;
         return __awaiter(this, void 0, void 0, function* () {
             const userIds = yield __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_noticeList).get(songId);
-            const sendData = {};
+            const forChannels = {};
+            const forDMs = [];
             if (!userIds)
                 return;
             for (const userId of Object.keys(userIds)) {
                 const userData = new UserDataClass(userId);
-                const channel = yield userData.getChannel();
-                if (channel === undefined) {
-                    userData.unregisterNoticeList();
-                    logger.info('delete', userId);
-                    continue;
+                if (yield userData.isDM()) {
+                    const user = client.users.cache.get(userId);
+                    if (user)
+                        forDMs.push(user);
                 }
                 else {
+                    const channel = yield userData.getChannel();
+                    if (channel === undefined) {
+                        userData.unregisterNoticeList();
+                        logger.info('delete', userId);
+                        continue;
+                    }
                     channel.guild.members.fetch(userId).catch(_ => {
                         userData.unregisterNoticeList();
                         logger.info('delete', userId);
                     });
-                    (_b = sendData[_c = channel.id]) !== null && _b !== void 0 ? _b : (sendData[_c] = { channel: channel, userIds: [] });
-                    sendData[channel.id].userIds.push(userId);
+                    (_b = forChannels[_c = channel.id]) !== null && _b !== void 0 ? _b : (forChannels[_c] = { channel: channel, userIds: [] });
+                    forChannels[channel.id].userIds.push(userId);
                 }
             }
-            for (const key of Object.keys(sendData)) {
-                sendData[key].channel.send(sendData[key].userIds.map(e => `<@${e}>`).join('') + 'リストの曲が流れるよ！');
+            for (const user of forDMs) {
+                user.send('リストの曲が流れるよ！');
+            }
+            for (const key of Object.keys(forChannels)) {
+                forChannels[key].channel.send(forChannels[key].userIds.map(e => `<@${e}>`).join('') + 'リストの曲が流れるよ！');
             }
             return Object.keys(userIds);
         });
     }
-    registerNoticeList(playlistData, channelId) {
+    registerNoticeList(playlistData, channelId, dm) {
         return __awaiter(this, void 0, void 0, function* () {
             const { userId } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
             if (userId)
@@ -104,22 +113,23 @@ class UserDataClass {
             __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_userData).set(__classPrivateFieldGet(this, _UserDataClass_userId, "f"), {
                 userId: __classPrivateFieldGet(this, _UserDataClass_userId, "f"),
                 channelId: channelId,
+                dm: dm,
                 registeredList: playlistData
             });
             return true;
         });
     }
-    updateNoticeList(channelId) {
+    updateNoticeList(channelId, dm) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { registeredList } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
+            const { registeredList, channelId: registedChannelId } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
             if (registeredList === undefined)
                 throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
             const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
             if (songListData.status === 'failed')
                 throw new Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
-            if (songListData.updated_at === registeredList.updated_at)
+            if (registedChannelId === channelId && songListData.updated_at === registeredList.updated_at)
                 throw new Error('プレイリストは最新の状態です！');
-            this.registerNoticeList(songListData, channelId);
+            this.registerNoticeList(songListData, channelId, dm);
             return songListData;
         });
     }
@@ -157,6 +167,12 @@ class UserDataClass {
             if (channelId === undefined)
                 return undefined;
             return client.channels.cache.get(channelId);
+        });
+    }
+    isDM() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { dm } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
+            return dm;
         });
     }
 }
@@ -237,8 +253,6 @@ client.once('ready', () => {
 });
 client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0, function* () {
     var _b, _c, _d, _e, _f, _g;
-    if (!interaction.channel)
-        return;
     if (!interaction.isCommand() || interaction.commandName !== 'ib')
         return;
     const replyManager = new ResponseIntetaction(interaction);
@@ -297,7 +311,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                 if (songListData.status === 'failed')
                     throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
                 const userData = new UserDataClass(interaction.user.id);
-                yield userData.registerNoticeList(songListData, interaction.channelId);
+                yield userData.registerNoticeList(songListData, interaction.channelId, !interaction.channel);
                 yield replyManager.reply({
                     content: '以下のリストを通知リストとして登録しました！',
                     embeds: [{
@@ -327,7 +341,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             case 'update': {
                 replyManager.standby({ ephemeral: true });
                 const userData = new UserDataClass(interaction.user.id);
-                const songListData = yield userData.updateNoticeList(interaction.channelId);
+                const songListData = yield userData.updateNoticeList(interaction.channelId, !interaction.channel);
                 replyManager.reply({
                     content: '以下のリストから通知リストを更新しました！',
                     embeds: [{
