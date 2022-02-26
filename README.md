@@ -3,7 +3,7 @@
 [KiiteCafe](https://cafe.kiite.jp)で好きな曲が流れる直前に通知するDiscordBotです。
 
 ## 使い方
-https://discord.com/api/oauth2/authorize?client_id=932282973997375488&permissions=0&scope=bot
+https://discord.com/api/oauth2/authorize?client_id=932282973997375488&permissions=0&scope=applications.commands%20bot
 これをクリックしてサーバーを選べば使えます。Botを導入すると以下のコマンドが使えるようになります。
 コマンドはDMでは使用できません。
 
