@@ -41,18 +41,18 @@ class UserDataClass {
                 const user = client.users.cache.get(userId);
                 if (user) forDMs.push(user);
             } else {
-                const channel = await userData.getChannel();
+                const channel = await userData.getChannel() as discord.TextChannel | undefined;
                 if (channel === undefined) {
                     userData.unregisterNoticeList();
                     logger.info('delete', userId);
-                    continue;
+                } else {
+                    channel.guild.members.fetch(userId).catch(_ => {
+                        userData.unregisterNoticeList();
+                        logger.info('delete', userId);
+                    });
+                    forChannels[channel.id] ??= { channel: channel, userIds: [] };
+                    forChannels[channel.id].userIds.push(userId);
                 }
-                channel.guild.members.fetch(userId).catch(_ => {
-                    userData.unregisterNoticeList();
-                    logger.info('delete', userId);
-                });
-                forChannels[channel.id] ??= { channel: channel, userIds: [] };
-                forChannels[channel.id].userIds.push(userId);
             }
         }
 
@@ -119,7 +119,7 @@ class UserDataClass {
     async getChannel () {
         const { channelId } = await this.#database;
         if (channelId === undefined) return undefined;
-        return client.channels.cache.get(channelId) as discord.TextChannel;
+        return client.channels.cache.get(channelId) as discord.TextChannel | discord.DMChannel;
     }
 
     async isDM () {
@@ -260,7 +260,7 @@ client.on('interactionCreate', async (interaction) => {
             if (songListData.status === 'failed') throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 
             const userData = new UserDataClass(interaction.user.id);
-            await userData.registerNoticeList(songListData, interaction.channelId, !interaction.channel);
+            await userData.registerNoticeList(songListData, interaction.channelId, !interaction.inGuild());
 
             await replyManager.reply({
                 content: '以下のリストを通知リストとして登録しました！',
@@ -292,7 +292,7 @@ client.on('interactionCreate', async (interaction) => {
         case 'update': {
             replyManager.standby({ ephemeral: true });
             const userData = new UserDataClass(interaction.user.id);
-            const songListData = await userData.updateNoticeList(interaction.channelId, !interaction.channel);
+            const songListData = await userData.updateNoticeList(interaction.channelId, interaction.inGuild());
 
             replyManager.reply({
                 content: '以下のリストから通知リストを更新しました！',

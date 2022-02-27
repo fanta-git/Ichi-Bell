@@ -80,14 +80,15 @@ class UserDataClass {
                     if (channel === undefined) {
                         userData.unregisterNoticeList();
                         logger.info('delete', userId);
-                        continue;
                     }
-                    channel.guild.members.fetch(userId).catch(_ => {
-                        userData.unregisterNoticeList();
-                        logger.info('delete', userId);
-                    });
-                    (_b = forChannels[_c = channel.id]) !== null && _b !== void 0 ? _b : (forChannels[_c] = { channel: channel, userIds: [] });
-                    forChannels[channel.id].userIds.push(userId);
+                    else {
+                        channel.guild.members.fetch(userId).catch(_ => {
+                            userData.unregisterNoticeList();
+                            logger.info('delete', userId);
+                        });
+                        (_b = forChannels[_c = channel.id]) !== null && _b !== void 0 ? _b : (forChannels[_c] = { channel: channel, userIds: [] });
+                        forChannels[channel.id].userIds.push(userId);
+                    }
                 }
             }
             for (const user of forDMs) {
@@ -311,7 +312,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                 if (songListData.status === 'failed')
                     throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
                 const userData = new UserDataClass(interaction.user.id);
-                yield userData.registerNoticeList(songListData, interaction.channelId, !interaction.channel);
+                yield userData.registerNoticeList(songListData, interaction.channelId, !interaction.inGuild());
                 yield replyManager.reply({
                     content: '以下のリストを通知リストとして登録しました！',
                     embeds: [{
@@ -341,7 +342,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             case 'update': {
                 replyManager.standby({ ephemeral: true });
                 const userData = new UserDataClass(interaction.user.id);
-                const songListData = yield userData.updateNoticeList(interaction.channelId, !interaction.channel);
+                const songListData = yield userData.updateNoticeList(interaction.channelId, interaction.inGuild());
                 replyManager.reply({
                     content: '以下のリストから通知リストを更新しました！',
                     embeds: [{
