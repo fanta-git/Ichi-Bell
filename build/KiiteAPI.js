@@ -31,7 +31,7 @@ const getAPI = (url, queryParam = {}) => __awaiter(void 0, void 0, void 0, funct
     stc.apiCallHist.push(now.getTime() + waitTime);
     if (waitTime)
         yield new Promise(resolve => setTimeout(resolve, waitTime));
-    logger.info('APIを呼び出しました');
+    logger.trace('APIを呼び出しました');
     const { error, response, body } = yield new Promise(resolve => (0, request_1.default)({ url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true, port: port }, (error, response, body) => {
         resolve(Object.assign({}, { error: error, response: response, body: body }));
     }));

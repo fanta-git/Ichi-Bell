@@ -6,7 +6,7 @@ require('dotenv').config();
 
 const client = new discord.Client({ intents: ['GUILDS'] });
 const logger = log4js.getLogger('main');
-const errorlog = log4js.getLogger('main');
+const errorlog = log4js.getLogger('error');
 log4js.configure('./log-config.json');
 
 type noticeListContents = Record<string, string> | undefined;

@@ -163,7 +163,7 @@ export const getAPI: FuncAPI = async (url, queryParam = {}) => {
     stc.apiCallHist.shift();
     stc.apiCallHist.push(now.getTime() + waitTime);
     if (waitTime) await new Promise(resolve => setTimeout(resolve, waitTime));
-    logger.info('APIを呼び出しました');
+    logger.trace('APIを呼び出しました');
 
     const { error, response, body } = await new Promise(resolve =>
         request(

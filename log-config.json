@@ -12,7 +12,7 @@
     "categories": {
         "default": {
             "appenders": ["console"],
-            "level": "all",
+            "level": "info",
             "enableCallStack": true
         },
         "unknownerror": {

@@ -50,7 +50,7 @@ const log4js_1 = __importDefault(require("log4js"));
 require('dotenv').config();
 const client = new discord.Client({ intents: ['GUILDS'] });
 const logger = log4js_1.default.getLogger('main');
-const errorlog = log4js_1.default.getLogger('main');
+const errorlog = log4js_1.default.getLogger('error');
 log4js_1.default.configure('./log-config.json');
 class UserDataClass {
     constructor(userId) {
