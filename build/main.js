@@ -342,7 +342,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             case 'update': {
                 replyManager.standby({ ephemeral: true });
                 const userData = new UserDataClass(interaction.user.id);
-                const songListData = yield userData.updateNoticeList(interaction.channelId, interaction.inGuild());
+                const songListData = yield userData.updateNoticeList(interaction.channelId, !interaction.inGuild());
                 replyManager.reply({
                     content: '以下のリストから通知リストを更新しました！',
                     embeds: [{
