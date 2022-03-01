@@ -41,7 +41,7 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var _a, _UserDataClass_noticeList, _UserDataClass_userData, _UserDataClass_database, _UserDataClass_userId, _ResponseIntetaction_interaction, _ResponseIntetaction_options, _ResponseIntetaction_timeout;
+var _a, _UserDataClass_noticeList, _UserDataClass_userData, _UserDataClass_userId, _ResponseIntetaction_interaction, _ResponseIntetaction_options, _ResponseIntetaction_timeout;
 Object.defineProperty(exports, "__esModule", { value: true });
 const discord = __importStar(require("discord.js"));
 const KiiteAPI = __importStar(require("./KiiteAPI"));
@@ -54,10 +54,8 @@ const errorlog = log4js_1.default.getLogger('error');
 log4js_1.default.configure('./log-config.json');
 class UserDataClass {
     constructor(userId) {
-        _UserDataClass_database.set(this, void 0);
         _UserDataClass_userId.set(this, void 0);
         __classPrivateFieldSet(this, _UserDataClass_userId, userId, "f");
-        __classPrivateFieldSet(this, _UserDataClass_database, __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_userData).get(userId).then(item => item !== null && item !== void 0 ? item : {}), "f");
     }
     static noticeSong(songId) {
         var _b;
@@ -70,18 +68,21 @@ class UserDataClass {
                 return;
             for (const userId of Object.keys(userIds)) {
                 const userData = new UserDataClass(userId);
-                if (yield userData.isDM()) {
+                const { channelId, dm } = yield userData.getData();
+                if (dm) {
                     const user = client.users.cache.get(userId);
                     if (user)
                         forDMs.push(user);
                 }
                 else {
-                    const channel = yield userData.getChannel();
-                    if (channel === undefined) {
+                    if (channelId === undefined) {
                         userData.unregisterNoticeList();
                         logger.info('delete', userId);
                     }
                     else {
+                        const channel = client.channels.cache.get(channelId);
+                        if (channel === undefined)
+                            throw Error('チャンネルの取得に失敗しました');
                         channel.guild.members.fetch(userId).catch(_ => {
                             userData.unregisterNoticeList();
                             logger.info('delete', userId);
@@ -102,7 +103,7 @@ class UserDataClass {
     }
     registerNoticeList(playlistData, channelId, dm) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { userId } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
+            const { userId } = yield this.getData();
             if (userId)
                 yield this.unregisterNoticeList();
             for (const song of playlistData.songs) {
@@ -122,23 +123,23 @@ class UserDataClass {
     }
     updateNoticeList(channelId, dm) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { registeredList, channelId: registedChannelId } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
+            const { registeredList, channelId: registedChannelId } = yield this.getData();
             if (registeredList === undefined)
-                throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
+                throw Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
             const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
             if (songListData.status === 'failed')
-                throw new Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
+                throw Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
             if (registedChannelId === channelId && songListData.updated_at === registeredList.updated_at)
-                throw new Error('プレイリストは最新の状態です！');
+                throw Error('プレイリストは最新の状態です！');
             this.registerNoticeList(songListData, channelId, dm);
             return songListData;
         });
     }
     unregisterNoticeList() {
         return __awaiter(this, void 0, void 0, function* () {
-            const { registeredList } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
+            const { registeredList } = yield this.getData();
             if (registeredList === undefined)
-                throw new Error('リストが登録されていません！');
+                throw Error('リストが登録されていません！');
             __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_userData).delete(__classPrivateFieldGet(this, _UserDataClass_userId, "f"));
             for (const songData of registeredList.songs) {
                 __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_noticeList).get(songData.video_id).then((item = {}) => {
@@ -154,30 +155,13 @@ class UserDataClass {
             return registeredList;
         });
     }
-    getRegisteredList() {
+    getData() {
         return __awaiter(this, void 0, void 0, function* () {
-            const { registeredList } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
-            if (registeredList === undefined)
-                throw new Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
-            return registeredList;
-        });
-    }
-    getChannel() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { channelId } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
-            if (channelId === undefined)
-                return undefined;
-            return client.channels.cache.get(channelId);
-        });
-    }
-    isDM() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { dm } = yield __classPrivateFieldGet(this, _UserDataClass_database, "f");
-            return dm;
+            return yield __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_userData).get(__classPrivateFieldGet(this, _UserDataClass_userId, "f")).then(item => item !== null && item !== void 0 ? item : {});
         });
     }
 }
-_a = UserDataClass, _UserDataClass_database = new WeakMap(), _UserDataClass_userId = new WeakMap();
+_a = UserDataClass, _UserDataClass_userId = new WeakMap();
 _UserDataClass_noticeList = { value: new keyv_1.default('sqlite://db.sqlite', { table: 'noticeList' }) };
 _UserDataClass_userData = { value: new keyv_1.default('sqlite://db.sqlite', { table: 'userData' }) };
 class ResponseIntetaction {
@@ -204,7 +188,7 @@ class ResponseIntetaction {
 }
 _ResponseIntetaction_interaction = new WeakMap(), _ResponseIntetaction_options = new WeakMap(), _ResponseIntetaction_timeout = new WeakMap();
 client.once('ready', () => {
-    var _b, _c;
+    var _b, _c, _d;
     logger.info(((_b = client.user) === null || _b === void 0 ? void 0 : _b.tag) + ' Ready!');
     observeNextSong();
     const data = [{
@@ -250,7 +234,12 @@ client.once('ready', () => {
                 }
             ]
         }];
-    (_c = client.application) === null || _c === void 0 ? void 0 : _c.commands.set(data);
+    if (process.env.TEST_SERVER_ID === undefined) {
+        (_c = client.application) === null || _c === void 0 ? void 0 : _c.commands.set(data);
+    }
+    else {
+        (_d = client.application) === null || _d === void 0 ? void 0 : _d.commands.set(data, process.env.TEST_SERVER_ID);
+    }
 });
 client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0, function* () {
     var _b, _c, _d, _e, _f, _g;
@@ -307,10 +296,10 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                 const url = interaction.options.getString('url');
                 const [listId] = (_e = url.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/)) !== null && _e !== void 0 ? _e : [];
                 if (!listId)
-                    throw new Error('URLが正しくありません！`https://kiite.jp/playlist/`で始まるURLを入力してください！');
+                    throw Error('URLが正しくありません！`https://kiite.jp/playlist/`で始まるURLを入力してください！');
                 const songListData = yield KiiteAPI.getAPI('/api/playlists/contents/detail', { list_id: listId });
                 if (songListData.status === 'failed')
-                    throw new Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
+                    throw Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
                 const userData = new UserDataClass(interaction.user.id);
                 yield userData.registerNoticeList(songListData, interaction.channelId, !interaction.inGuild());
                 yield replyManager.reply({
@@ -327,8 +316,10 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             case 'list': {
                 replyManager.standby({ ephemeral: true });
                 const userData = new UserDataClass(interaction.user.id);
-                const registeredList = yield userData.getRegisteredList();
-                replyManager.reply({
+                const { registeredList } = yield userData.getData();
+                if (registeredList === undefined)
+                    throw Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
+                yield replyManager.reply({
                     content: '以下のリストが通知リストとして登録されています！',
                     embeds: [{
                             title: `${registeredList.list_title}`,
@@ -343,7 +334,7 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
                 replyManager.standby({ ephemeral: true });
                 const userData = new UserDataClass(interaction.user.id);
                 const songListData = yield userData.updateNoticeList(interaction.channelId, !interaction.inGuild());
-                replyManager.reply({
+                yield replyManager.reply({
                     content: '以下のリストから通知リストを更新しました！',
                     embeds: [{
                             title: songListData.list_title,
@@ -357,16 +348,20 @@ client.on('interactionCreate', (interaction) => __awaiter(void 0, void 0, void 0
             case 'unregister': {
                 const target = (_f = interaction.options.getUser('target')) !== null && _f !== void 0 ? _f : interaction.user;
                 const myself = target.id === interaction.user.id;
+                const userData = new UserDataClass(target.id);
+                const { channelId } = yield userData.getData();
+                if (!myself && interaction.channelId !== channelId)
+                    throw Error('指定ユーザーのリスト登録解除は通知先として設定されているチャンネル内で行う必要があります！');
                 if (!myself && !((_g = interaction.memberPermissions) === null || _g === void 0 ? void 0 : _g.has('MANAGE_CHANNELS'))) {
                     replyManager.standby({ ephemeral: true });
                     throw Error('指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
                 }
                 replyManager.standby(myself ? { ephemeral: true } : undefined);
-                const userData = new UserDataClass(target.id);
                 yield userData.unregisterNoticeList();
-                replyManager.reply({
+                yield replyManager.reply({
                     content: myself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
                 });
+                break;
             }
         }
     }
@@ -416,10 +411,10 @@ function observeNextSong() {
                 const nowTime = new Date().getTime();
                 const startTime = new Date(cafeSongData.start_time).getTime();
                 const endTime = startTime + Math.min(cafeSongData.msec_duration, 480e3);
-                UserDataClass.noticeSong(cafeSongData.video_id);
-                setTimeout(() => { var _b; return (_b = client.user) === null || _b === void 0 ? void 0 : _b.setActivity({ name: cafeSongData.title, type: 'LISTENING' }); }, Math.max(startTime - nowTime, 0));
                 if (getNext)
-                    yield new Promise(resolve => setTimeout(resolve, Math.max(endTime - 60e3 - nowTime, 3e3)));
+                    UserDataClass.noticeSong(cafeSongData.video_id);
+                setTimeout(() => { var _b; return (_b = client.user) === null || _b === void 0 ? void 0 : _b.setActivity({ name: cafeSongData.title, type: 'LISTENING' }); }, Math.max(startTime - nowTime, 0));
+                yield new Promise(resolve => setTimeout(resolve, Math.max(endTime - 60e3 - nowTime, getNext ? 3e3 : 0)));
                 getNext = new Date().getTime() < endTime;
             }
             catch (e) {
