@@ -3,8 +3,9 @@
 [KiiteCafe](https://cafe.kiite.jp)で好きな曲が流れる直前に通知するDiscordBotです。  
 
 ## 使い方
-~~https://discord.com/api/oauth2/authorize?client_id=932282973997375488&permissions=0&scope=applications.commands%20bot~~  
-~~これをクリックしてサーバーを選べば使えます。~~**動作が恐ろしく不安定なので使用を推奨しません**
+https://discord.com/api/oauth2/authorize?client_id=932282973997375488&permissions=0&scope=applications.commands%20bot  
+これをクリックしてサーバーを選べば使えます。無料のホスティングサービスを使っているためかときどき止まったりします。  
+自前で走らせる場合は`.env`ファイルを作り`TOKEN`でDiscordBotのトークンを指定してください。  
 Botを導入すると`/ib`から始まる下記のコマンドが使えるようになります。  コマンドはDMでも使用できます。  
 リストを登録するとリストに入っている曲がCafeで流れる1分前に通知します。リストのどの曲が流れるかは分かりません。  
 

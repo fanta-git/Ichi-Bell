@@ -47,10 +47,11 @@ const discord = __importStar(require("discord.js"));
 const KiiteAPI = __importStar(require("./KiiteAPI"));
 const keyv_1 = __importDefault(require("keyv"));
 const log4js_1 = __importDefault(require("log4js"));
-require('dotenv').config();
+const dotenv_1 = __importDefault(require("dotenv"));
 const client = new discord.Client({ intents: ['GUILDS'] });
 const logger = log4js_1.default.getLogger('main');
 const errorlog = log4js_1.default.getLogger('error');
+dotenv_1.default.config();
 log4js_1.default.configure('./log-config.json');
 class UserDataClass {
     constructor(userId) {
@@ -424,4 +425,6 @@ function observeNextSong() {
         }
     });
 }
+if (process.env.TOKEN === undefined)
+    throw Error('トークンが設定されていません！');
 client.login(process.env.TOKEN);

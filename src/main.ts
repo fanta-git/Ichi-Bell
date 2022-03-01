@@ -2,11 +2,12 @@ import * as discord from 'discord.js';
 import * as KiiteAPI from './KiiteAPI';
 import Keyv from 'keyv';
 import log4js from 'log4js';
-require('dotenv').config();
+import dotenv from 'dotenv';
 
 const client = new discord.Client({ intents: ['GUILDS'] });
 const logger = log4js.getLogger('main');
 const errorlog = log4js.getLogger('error');
+dotenv.config();
 log4js.configure('./log-config.json');
 
 type noticeListContents = Record<string, string> | undefined;
@@ -375,4 +376,5 @@ async function observeNextSong () {
     }
 }
 
+if (process.env.TOKEN === undefined) throw Error('トークンが設定されていません！');
 client.login(process.env.TOKEN);
