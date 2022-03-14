@@ -38,8 +38,9 @@ class UserDataClass {
             const userData = new UserDataClass(userId);
             const { channelId, dm } = await userData.getData();
             if (dm) {
-                const user = client.users.cache.get(userId);
-                if (user) forDMs.push(user);
+                const user = client.users.cache.get(userId) ?? await client.users.fetch(userId);
+                if (user === undefined) throw Error('DMの取得に失敗しました');
+                forDMs.push(user);
             } else {
                 if (channelId === undefined) {
                     userData.unregisterNoticeList();
