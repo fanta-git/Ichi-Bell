@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 
 const client = new discord.Client({ intents: ['GUILDS'] });
 const logger = log4js.getLogger('main');
-const errorlog = log4js.getLogger('error');
+const errorlog = log4js.getLogger('unknownerror');
 dotenv.config();
 log4js.configure('./log-config.json');
 
@@ -46,7 +46,7 @@ class UserDataClass {
                     userData.unregisterNoticeList();
                     logger.info('delete', userId);
                 } else {
-                    const channel = client.channels.cache.get(channelId) as discord.TextChannel | undefined;
+                    const channel = (client.channels.cache.get(channelId) ?? client.channels.fetch(channelId)) as discord.TextChannel | undefined;
                     if (channel === undefined) throw Error('チャンネルの取得に失敗しました');
                     channel.guild.members.fetch(userId).catch(_ => {
                         userData.unregisterNoticeList();

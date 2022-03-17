@@ -4,7 +4,7 @@ import log4js from 'log4js';
 require('dotenv').config();
 
 const logger = log4js.getLogger('KiiteAPI');
-const errlog = log4js.getLogger('error');
+const errlog = log4js.getLogger('unknownerror');
 log4js.configure('./log-config.json');
 
 const port = Number(process.env.POOT) ?? 5000;
@@ -165,7 +165,7 @@ export const getAPI: FuncAPI = async (url, queryParam = {}) => {
     if (waitTime) await new Promise(resolve => setTimeout(resolve, waitTime));
     logger.trace('APIを呼び出しました');
 
-    const { error, response, body } = await new Promise(resolve =>
+    const { response, body } = await new Promise(resolve =>
         request(
             { url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true, port: port },
             (error, response, body) => {
@@ -177,7 +177,8 @@ export const getAPI: FuncAPI = async (url, queryParam = {}) => {
     if (response?.statusCode === 200) {
         return body;
     } else {
-        errlog.error(error);
-        throw new Error(error);
+        errlog.error(response);
+        console.log('error: ', response);
+        throw new Error(`[${response.statusCode}]${response.statusMessage}`);
     }
 };

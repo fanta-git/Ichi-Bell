@@ -50,7 +50,7 @@ const log4js_1 = __importDefault(require("log4js"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const client = new discord.Client({ intents: ['GUILDS'] });
 const logger = log4js_1.default.getLogger('main');
-const errorlog = log4js_1.default.getLogger('error');
+const errorlog = log4js_1.default.getLogger('unknownerror');
 dotenv_1.default.config();
 log4js_1.default.configure('./log-config.json');
 class UserDataClass {
@@ -59,8 +59,8 @@ class UserDataClass {
         __classPrivateFieldSet(this, _UserDataClass_userId, userId, "f");
     }
     static noticeSong(songId) {
-        var _b;
-        var _c;
+        var _b, _c, _d;
+        var _e;
         return __awaiter(this, void 0, void 0, function* () {
             const userIds = yield __classPrivateFieldGet(UserDataClass, _a, "f", _UserDataClass_noticeList).get(songId);
             const forChannels = {};
@@ -71,9 +71,10 @@ class UserDataClass {
                 const userData = new UserDataClass(userId);
                 const { channelId, dm } = yield userData.getData();
                 if (dm) {
-                    const user = client.users.cache.get(userId);
-                    if (user)
-                        forDMs.push(user);
+                    const user = (_b = client.users.cache.get(userId)) !== null && _b !== void 0 ? _b : yield client.users.fetch(userId);
+                    if (user === undefined)
+                        throw Error('DMの取得に失敗しました');
+                    forDMs.push(user);
                 }
                 else {
                     if (channelId === undefined) {
@@ -81,14 +82,14 @@ class UserDataClass {
                         logger.info('delete', userId);
                     }
                     else {
-                        const channel = client.channels.cache.get(channelId);
+                        const channel = ((_c = client.channels.cache.get(channelId)) !== null && _c !== void 0 ? _c : client.channels.fetch(channelId));
                         if (channel === undefined)
                             throw Error('チャンネルの取得に失敗しました');
                         channel.guild.members.fetch(userId).catch(_ => {
                             userData.unregisterNoticeList();
                             logger.info('delete', userId);
                         });
-                        (_b = forChannels[_c = channel.id]) !== null && _b !== void 0 ? _b : (forChannels[_c] = { channel: channel, userIds: [] });
+                        (_d = forChannels[_e = channel.id]) !== null && _d !== void 0 ? _d : (forChannels[_e] = { channel: channel, userIds: [] });
                         forChannels[channel.id].userIds.push(userId);
                     }
                 }

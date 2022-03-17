@@ -4,8 +4,8 @@
             "type": "console",
             "level": "all"
         },
-        "error": {
-            "type": "file",
+        "errorFile": {
+            "type": "fileSync",
             "filename": "./log/errors.log"
         }
     },
@@ -16,8 +16,8 @@
             "enableCallStack": true
         },
         "unknownerror": {
-            "appenders": ["error"],
-            "level": "error",
+            "appenders": ["errorFile"],
+            "level": "info",
             "enableCallStack": true
         }
     }

@@ -19,7 +19,7 @@ const request_1 = __importDefault(require("request"));
 const log4js_1 = __importDefault(require("log4js"));
 require('dotenv').config();
 const logger = log4js_1.default.getLogger('KiiteAPI');
-const errlog = log4js_1.default.getLogger('error');
+const errlog = log4js_1.default.getLogger('unknownerror');
 log4js_1.default.configure('./log-config.json');
 const port = (_a = Number(process.env.POOT)) !== null && _a !== void 0 ? _a : 5000;
 const getAPI = (url, queryParam = {}) => __awaiter(void 0, void 0, void 0, function* () {
@@ -32,15 +32,16 @@ const getAPI = (url, queryParam = {}) => __awaiter(void 0, void 0, void 0, funct
     if (waitTime)
         yield new Promise(resolve => setTimeout(resolve, waitTime));
     logger.trace('APIを呼び出しました');
-    const { error, response, body } = yield new Promise(resolve => (0, request_1.default)({ url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true, port: port }, (error, response, body) => {
+    const { response, body } = yield new Promise(resolve => (0, request_1.default)({ url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true, port: port }, (error, response, body) => {
         resolve(Object.assign({}, { error: error, response: response, body: body }));
     }));
     if ((response === null || response === void 0 ? void 0 : response.statusCode) === 200) {
         return body;
     }
     else {
-        errlog.error(error);
-        throw new Error(error);
+        errlog.error(response);
+        console.log('error: ', response);
+        throw new Error(`[${response.statusCode}]${response.statusMessage}`);
     }
 });
 exports.getAPI = getAPI;
