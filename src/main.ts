@@ -28,8 +28,8 @@ class UserDataClass {
         this.#userId = userId;
     }
 
-    static async noticeSong (songId: string): Promise<string[] | undefined> {
-        const userIds = await UserDataClass.#noticeList.get(songId);
+    static async noticeSong (songData: KiiteAPI.ReturnCafeSong): Promise<discord.Message<boolean>[] | undefined> {
+        const userIds = await UserDataClass.#noticeList.get(songData.video_id);
         const forChannels: Record<string, { channel: discord.TextChannel, userIds: string[] }> = {};
         const forDMs: discord.User[] = [];
         if (!userIds) return;
@@ -58,13 +58,24 @@ class UserDataClass {
             }
         }
 
+        const messages: Promise<discord.Message<boolean>>[] = [];
+        const noticeMessage = 'リストの曲が流れるよ！';
         for (const user of forDMs) {
-            user.send('リストの曲が流れるよ！');
+            const msg = user.send(noticeMessage);
+            messages.push(msg);
         }
         for (const key of Object.keys(forChannels)) {
-            forChannels[key].channel.send(forChannels[key].userIds.map(e => `<@${e}>`).join('') + 'リストの曲が流れるよ！');
+            const msg = forChannels[key].channel.send(forChannels[key].userIds.map(e => `<@${e}>`).join('') + noticeMessage);
+            messages.push(msg);
         }
-        return Object.keys(userIds);
+
+        setTimeout(async () => {
+            for await (const msg of messages) {
+                msg.edit(msg.content.replace(noticeMessage, `${songData.title}(https://www.nicovideo.jp/watch/${songData.video_id})が流れたよ！`));
+            }
+        }, new Date(songData.start_time).getTime() + Number(songData.msec_duration) - Date.now());
+
+        return Promise.all(messages);
     }
 
     async registerNoticeList (playlistData: KiiteAPI.PlaylistContents, channelId: string, dm: boolean) {
@@ -366,7 +377,7 @@ async function observeNextSong () {
             const startTime = new Date(cafeSongData.start_time).getTime();
             const endTime = startTime + Math.min(cafeSongData.msec_duration, 480e3);
 
-            if (getNext) UserDataClass.noticeSong(cafeSongData.video_id);
+            if (getNext) UserDataClass.noticeSong(cafeSongData);
             setTimeout(() => client.user?.setActivity({ name: cafeSongData.title, type: 'LISTENING' }), Math.max(startTime - nowTime, 0));
             await new Promise(resolve => setTimeout(resolve, Math.max(endTime - 60e3 - nowTime, getNext ? 3e3 : 0)));
             getNext = new Date().getTime() < endTime;
