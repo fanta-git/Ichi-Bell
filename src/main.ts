@@ -71,7 +71,7 @@ class UserDataClass {
 
         setTimeout(async () => {
             for await (const msg of messages) {
-                msg.edit(msg.content.replace(noticeMessage, `${songData.title}(https://www.nicovideo.jp/watch/${songData.video_id})が流れたよ！`));
+                msg.edit(msg.content.replace(noticeMessage, `__${songData.title}__が流れたよ！`));
             }
         }, new Date(songData.start_time).getTime() + Number(songData.msec_duration) - Date.now());
 
