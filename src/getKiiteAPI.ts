@@ -1,12 +1,13 @@
 import request from 'request';
-import { FuncAPI } from './global';
+
+import { FuncAPI } from './APITypes';
 require('dotenv').config();
 
 const port = Number(process.env.POOT) ?? 5000;
 
-const getAPI: FuncAPI = async (url, queryParam = {}) => {
+const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
     const now = new Date();
-    const stc = getAPI.staticVariable ??= { apiCallHist: new Array<number>(4).fill(0) };
+    const stc = getKiiteAPI.staticVariable ??= { apiCallHist: new Array<number>(4).fill(0) };
     const waitTime = Math.max(stc.apiCallHist[0] + 1e3 - now.getTime(), 0);
     stc.apiCallHist.shift();
     stc.apiCallHist.push(now.getTime() + waitTime);
@@ -30,4 +31,4 @@ const getAPI: FuncAPI = async (url, queryParam = {}) => {
     }
 };
 
-export default getAPI;
+export default getKiiteAPI;

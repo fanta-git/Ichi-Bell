@@ -1,7 +1,8 @@
-import getAPI from './KiiteAPI';
-import { PlaylistContents, ReturnCafeSong } from './global';
 import * as discord from 'discord.js';
 import Keyv from 'keyv';
+
+import getKiiteAPI from './getKiiteAPI';
+import { PlaylistContents, ReturnCafeSong } from './APITypes';
 
 type userDataContents = {
     registeredList: PlaylistContents | undefined,
@@ -10,7 +11,7 @@ type userDataContents = {
     channelId: string | undefined
 };
 
-export default class UserDataClass {
+class UserDataManager {
     static #noticeList: Keyv<Record<string, string> | undefined> = new Keyv('sqlite://db.sqlite', { table: 'noticeList' });
     static #userData: Keyv<userDataContents> = new Keyv('sqlite://db.sqlite', { table: 'userData' });
 
@@ -21,13 +22,13 @@ export default class UserDataClass {
     }
 
     static async noticeSong (client: discord.Client, songData: ReturnCafeSong): Promise<discord.Message<boolean>[] | undefined> {
-        const userIds = await UserDataClass.#noticeList.get(songData.video_id);
+        const userIds = await UserDataManager.#noticeList.get(songData.video_id);
         const forChannels: Record<string, { channel: discord.TextChannel, userIds: string[] }> = {};
         const forDMs: discord.User[] = [];
         if (!userIds) return;
 
         for (const userId of Object.keys(userIds)) {
-            const userData = new UserDataClass(userId);
+            const userData = new UserDataManager(userId);
             const { channelId, dm } = await userData.getData();
             if (dm) {
                 const user = client.users.cache.get(userId) ?? await client.users.fetch(userId);
@@ -74,12 +75,12 @@ export default class UserDataClass {
         const { userId } = await this.getData();
         if (userId) await this.unregisterNoticeList();
         for (const song of playlistData.songs) {
-            UserDataClass.#noticeList.get(song.video_id).then((item = {}) => {
+            UserDataManager.#noticeList.get(song.video_id).then((item = {}) => {
                 item[this.#userId] = this.#userId;
-                UserDataClass.#noticeList.set(song.video_id, item);
+                UserDataManager.#noticeList.set(song.video_id, item);
             });
         }
-        UserDataClass.#userData.set(this.#userId, {
+        UserDataManager.#userData.set(this.#userId, {
             userId: this.#userId,
             channelId: channelId,
             dm: dm,
@@ -91,7 +92,7 @@ export default class UserDataClass {
     async updateNoticeList (channelId: string, dm: boolean) {
         const { registeredList, channelId: registedChannelId } = await this.getData();
         if (registeredList === undefined) throw Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
-        const songListData = await getAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
+        const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
         if (songListData.status === 'failed') throw Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
         if (registedChannelId === channelId && songListData.updated_at === registeredList.updated_at) throw Error('プレイリストは最新の状態です！');
         this.registerNoticeList(songListData, channelId, dm);
@@ -101,14 +102,14 @@ export default class UserDataClass {
     async unregisterNoticeList () {
         const { registeredList } = await this.getData();
         if (registeredList === undefined) throw Error('リストが登録されていません！');
-        UserDataClass.#userData.delete(this.#userId);
+        UserDataManager.#userData.delete(this.#userId);
         for (const songData of registeredList.songs) {
-            UserDataClass.#noticeList.get(songData.video_id).then((item = {}) => {
+            UserDataManager.#noticeList.get(songData.video_id).then((item = {}) => {
                 delete item[this.#userId];
                 if (Object.keys(item).length) {
-                    UserDataClass.#noticeList.set(songData.video_id, item);
+                    UserDataManager.#noticeList.set(songData.video_id, item);
                 } else {
-                    UserDataClass.#noticeList.delete(songData.video_id);
+                    UserDataManager.#noticeList.delete(songData.video_id);
                 }
             });
         }
@@ -116,6 +117,8 @@ export default class UserDataClass {
     }
 
     async getData () {
-        return await UserDataClass.#userData.get(this.#userId).then(item => item ?? {} as userDataContents);
+        return await UserDataManager.#userData.get(this.#userId).then(item => item ?? {} as userDataContents);
     }
 }
+
+export default UserDataManager;
