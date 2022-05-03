@@ -1,7 +1,6 @@
 .DS_STORE
 .env
 node_modules/
-build/
-log/
 db.sqlite
 .eslintrc.js
+dist/
