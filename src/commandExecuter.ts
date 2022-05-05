@@ -2,7 +2,7 @@ import * as discord from 'discord.js';
 
 import getAPI from './getKiiteAPI';
 import ResponseIntetaction from './ResponseInteraction';
-import { PlaylistContents } from './APITypes';
+import { PlaylistContents } from './apiTypes';
 import UserDataClass from './UserDataManager';
 
 type InteractionFuncs = {
@@ -15,9 +15,8 @@ const commandExecuter = async (interaction: discord.Interaction) => {
     const replyManager = new ResponseIntetaction(interaction);
     try {
         const command = interaction.options.getSubcommand();
-        const returns = commands;
-        if (!isKey(command, returns)) return;
-        await returns[command](replyManager, interaction);
+        if (!isKey(command, adaptCommands)) return;
+        await adaptCommands[command](replyManager, interaction);
     } catch (e) {
         if (e instanceof Error) {
             replyManager.reply({
@@ -40,7 +39,7 @@ const makePlaylistEmbeds = (playlist: PlaylistContents) => [{
     footer: { text: `最終更新: ${playlist.updated_at}` }
 }];
 
-const commands: Record<string, InteractionFuncs> = {
+const adaptCommands: Record<string, InteractionFuncs> = {
     now: async (replyManager) => {
         const makeStatusbar = (nowVal: number, maxVal: number, barLength: number) => {
             const nowLength = nowVal * (barLength - 1) / maxVal | 0;

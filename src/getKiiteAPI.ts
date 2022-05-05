@@ -1,6 +1,6 @@
 import request from 'request';
 
-import { FuncAPI } from './APITypes';
+import { FuncAPI } from './apiTypes';
 require('dotenv').config();
 
 const port = Number(process.env.POOT) ?? 5000;

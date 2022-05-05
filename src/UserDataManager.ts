@@ -2,7 +2,7 @@ import * as discord from 'discord.js';
 import Keyv from 'keyv';
 
 import getKiiteAPI from './getKiiteAPI';
-import { PlaylistContents, ReturnCafeSong } from './APITypes';
+import { PlaylistContents, ReturnCafeSong } from './apiTypes';
 
 type userDataContents = {
     registeredList: PlaylistContents | undefined,
