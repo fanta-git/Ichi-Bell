@@ -3,25 +3,44 @@ import * as discord from 'discord.js';
 import getKiiteAPI from './getKiiteAPI';
 import UserDataManager from './UserDataManager';
 
-const exportDefault = async (client: discord.Client) => {
-    let isGetNext: boolean = false;
+const DURATION_MAX = 8 * 60e3;
+const RUN_LIMIT = 10 * 3600e3;
+const REBOOT_NEED_SONGDURATION = 3 * 60e3;
+const NOTICE_AGO = 60e3;
+const API_UPDATE_WAIT = 3e3;
+const API_ERROR_WAIT = 15e3;
+
+const observeNextSong = async (client: discord.Client) => {
+    const launchedTime = Date.now();
+    const isGlitch = process.env.IS_GLITCH === 'true';
+    let isGetNext = false;
     while (true) {
         try {
             const apiUrl = isGetNext ? '/api/cafe/next_song' : '/api/cafe/now_playing';
             const cafeSongData = await getKiiteAPI(apiUrl);
-            const nowTime = new Date().getTime();
             const startTime = new Date(cafeSongData.start_time).getTime();
-            const endTime = startTime + Math.min(cafeSongData.msec_duration, 480e3);
+            const endTime = startTime + Math.min(cafeSongData.msec_duration, DURATION_MAX);
 
             if (isGetNext) UserDataManager.noticeSong(client, cafeSongData);
-            setTimeout(() => client.user?.setActivity({ name: cafeSongData.title, type: 'LISTENING' }), Math.max(startTime - nowTime, 0));
-            await new Promise(resolve => setTimeout(resolve, Math.max(endTime - 60e3 - nowTime, isGetNext ? 3e3 : 0)));
-            isGetNext = new Date().getTime() < endTime as boolean;
+
+            await timer(Math.max(startTime - Date.now(), 0));
+
+            const isOverLimit = Date.now() - launchedTime > RUN_LIMIT;
+            const haveAllowance = endTime - Date.now() > REBOOT_NEED_SONGDURATION;
+            if (isGlitch && isOverLimit && haveAllowance) break;
+            client.user?.setActivity({ name: cafeSongData.title, type: 'LISTENING' });
+
+            await timer(Math.max(endTime - NOTICE_AGO - Date.now(), isGetNext ? API_UPDATE_WAIT : 0));
+            isGetNext = Date.now() < endTime as boolean;
         } catch (e) {
             console.error(e);
-            await new Promise(resolve => setTimeout(resolve, 15e3));
+            await timer(API_ERROR_WAIT);
         }
     }
+
+    client.destroy();
 };
 
-export default exportDefault;
+const timer = (waitTimeMs: number) => new Promise(resolve => setTimeout(resolve, waitTimeMs));
+
+export default observeNextSong;
