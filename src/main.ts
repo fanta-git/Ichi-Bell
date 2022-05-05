@@ -4,7 +4,9 @@ import dotenv from 'dotenv';
 import commandExecuter from './commandExecuter';
 import commandData from './commandData';
 import observeNextSong from './observeNextSong';
+import server from './server';
 
+server();
 const client = new discord.Client({ intents: ['GUILDS'] });
 dotenv.config();
 

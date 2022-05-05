@@ -4,7 +4,7 @@ import getKiiteAPI from './getKiiteAPI';
 import UserDataManager from './UserDataManager';
 
 const DURATION_MAX = 8 * 60e3;
-const RUN_LIMIT = 10 * 3600e3;
+const RUN_LIMIT = Number(process.env.REBOOT_HOUR) * 3600e3 || Infinity;
 const REBOOT_NEED_SONGDURATION = 3 * 60e3;
 const NOTICE_AGO = 60e3;
 const API_UPDATE_WAIT = 3e3;
@@ -12,7 +12,6 @@ const API_ERROR_WAIT = 15e3;
 
 const observeNextSong = async (client: discord.Client) => {
     const launchedTime = Date.now();
-    const isGlitch = process.env.IS_GLITCH === 'true';
     let isGetNext = false;
     while (true) {
         try {
@@ -27,7 +26,7 @@ const observeNextSong = async (client: discord.Client) => {
 
             const isOverLimit = Date.now() - launchedTime > RUN_LIMIT;
             const haveAllowance = endTime - Date.now() > REBOOT_NEED_SONGDURATION;
-            if (isGlitch && isOverLimit && haveAllowance) break;
+            if (isOverLimit && haveAllowance) break;
             client.user?.setActivity({ name: cafeSongData.title, type: 'LISTENING' });
 
             await timer(Math.max(endTime - NOTICE_AGO - Date.now(), isGetNext ? API_UPDATE_WAIT : 0));
