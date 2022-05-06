@@ -4,14 +4,17 @@ import dotenv from 'dotenv';
 import commandExecuter from './commandExecuter';
 import commandData from './commandData';
 import observeNextSong from './observeNextSong';
-import server from './server';
+import createServer from './createServer';
 
-server();
+const server = createServer();
 const client = new discord.Client({ intents: ['GUILDS'] });
 dotenv.config();
 
 client.once('ready', () => {
-    observeNextSong(client);
+    observeNextSong(client).then(() => {
+        server.close();
+        client.destroy();
+    });
 
     if (process.env.TEST_SERVER_ID === undefined) {
         client.application?.commands.set(commandData);

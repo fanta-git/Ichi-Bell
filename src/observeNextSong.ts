@@ -36,8 +36,6 @@ const observeNextSong = async (client: discord.Client) => {
             await timer(API_ERROR_WAIT);
         }
     }
-
-    client.destroy();
 };
 
 const timer = (waitTimeMs: number) => new Promise(resolve => setTimeout(resolve, waitTimeMs));
