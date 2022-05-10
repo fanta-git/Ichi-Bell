@@ -1,7 +1,7 @@
 import * as discord from 'discord.js';
 
 import getKiiteAPI from './getKiiteAPI';
-import UserDataManager from './UserDataManager';
+import NoticeSender from './NoticeSender';
 
 const DURATION_MAX = 8 * 60e3;
 const RUN_LIMIT = Number(process.env.REBOOT_HOUR) * 3600e3 || Infinity;
@@ -19,10 +19,12 @@ const observeNextSong = async (client: discord.Client) => {
             const cafeSongData = await getKiiteAPI(apiUrl);
             const startTime = new Date(cafeSongData.start_time).getTime();
             const endTime = startTime + Math.min(cafeSongData.msec_duration, DURATION_MAX);
-
-            if (isGetNext) UserDataManager.noticeSong(client, cafeSongData);
+            const sender = new NoticeSender(client, cafeSongData);
+            if (isGetNext) sender.sendNotice();
 
             await timer(Math.max(startTime - Date.now(), 0));
+
+            sender.updateNotice();
 
             const isOverLimit = Date.now() - launchedTime > RUN_LIMIT;
             const haveAllowance = endTime - Date.now() > REBOOT_NEED_SONGDURATION;
