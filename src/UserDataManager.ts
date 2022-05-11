@@ -1,19 +1,8 @@
-import Keyv from 'keyv';
-
 import getKiiteAPI from './getKiiteAPI';
+import { noticeList, userData } from './database';
 import { PlaylistContents } from './apiTypes';
 
-type userDataContents = {
-    registeredList: PlaylistContents | undefined,
-    userId: string | undefined,
-    dm: boolean | undefined,
-    channelId: string | undefined
-};
-
 class UserDataManager {
-    static #noticeList: Keyv<Record<string, string> | undefined> = new Keyv('sqlite://db.sqlite', { table: 'noticeList' });
-    static #userData: Keyv<userDataContents> = new Keyv('sqlite://db.sqlite', { table: 'userData' });
-
     #userId: string;
 
     constructor (userId: string) {
@@ -21,15 +10,15 @@ class UserDataManager {
     }
 
     async registerNoticeList (playlistData: PlaylistContents, channelId: string, dm: boolean) {
-        const { userId } = await this.getData();
+        const { userId } = await userData.get(this.#userId) ?? {};
         if (userId) await this.unregisterNoticeList();
         for (const song of playlistData.songs) {
-            UserDataManager.#noticeList.get(song.video_id).then((item = {}) => {
-                item[this.#userId] = this.#userId;
-                UserDataManager.#noticeList.set(song.video_id, item);
+            noticeList.get(song.video_id).then((item = []) => {
+                if (!item.includes(this.#userId)) item.push(this.#userId);
+                noticeList.set(song.video_id, item);
             });
         }
-        UserDataManager.#userData.set(this.#userId, {
+        userData.set(this.#userId, {
             userId: this.#userId,
             channelId: channelId,
             dm: dm,
@@ -39,7 +28,7 @@ class UserDataManager {
     }
 
     async updateNoticeList (channelId: string, dm: boolean) {
-        const { registeredList, channelId: registedChannelId } = await this.getData();
+        const { registeredList, channelId: registedChannelId } = await userData.get(this.#userId) ?? {};
         if (registeredList === undefined) throw Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
         const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
         if (songListData.status === 'failed') throw Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
@@ -49,24 +38,20 @@ class UserDataManager {
     }
 
     async unregisterNoticeList () {
-        const { registeredList } = await this.getData();
+        const { registeredList } = await userData.get(this.#userId) ?? {};
         if (registeredList === undefined) throw Error('リストが登録されていません！');
-        UserDataManager.#userData.delete(this.#userId);
+        userData.delete(this.#userId);
         for (const songData of registeredList.songs) {
-            UserDataManager.#noticeList.get(songData.video_id).then((item = {}) => {
-                delete item[this.#userId];
-                if (Object.keys(item).length) {
-                    UserDataManager.#noticeList.set(songData.video_id, item);
+            noticeList.get(songData.video_id).then((item = []) => {
+                const filted = item.filter(v => v !== this.#userId);
+                if (filted.length) {
+                    noticeList.set(songData.video_id, filted);
                 } else {
-                    UserDataManager.#noticeList.delete(songData.video_id);
+                    noticeList.delete(songData.video_id);
                 }
             });
         }
         return registeredList;
-    }
-
-    async getData () {
-        return await UserDataManager.#userData.get(this.#userId).then(item => item ?? {} as userDataContents);
     }
 }
 

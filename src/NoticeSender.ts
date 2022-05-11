@@ -1,16 +1,9 @@
 import * as discord from 'discord.js';
-import Keyv from 'keyv';
 
-import { PlaylistContents, ReturnCafeSong } from './apiTypes';
+import { ReturnCafeSong } from './apiTypes';
+import { noticeList, userData } from './database';
 
 const NOTICE_MSG = 'リストの曲が流れるよ！';
-
-type userDataContents = {
-    registeredList: PlaylistContents | undefined,
-    userId: string | undefined,
-    dm: boolean | undefined,
-    channelId: string | undefined
-};
 
 type recipientData = {
     isDM: true,
@@ -24,9 +17,6 @@ type recipientData = {
 };
 
 class songNoticer {
-    static #noticeList: Keyv<Record<string, string> | undefined> = new Keyv('sqlite://db.sqlite', { table: 'noticeList' });
-    static #userData: Keyv<userDataContents> = new Keyv('sqlite://db.sqlite', { table: 'userData' });
-
     #client: discord.Client;
     #songData: ReturnCafeSong;
     #recipients: recipientData[];
@@ -38,11 +28,11 @@ class songNoticer {
     }
 
     async sendNotice () {
-        const userIds = await songNoticer.#noticeList.get(this.#songData.video_id);
+        const userIds = await noticeList.get(this.#songData.video_id);
         if (!userIds) return;
 
-        for (const userId of Object.keys(userIds)) {
-            const { channelId, dm } = await songNoticer.#userData.get(userId) ?? {};
+        for (const userId of userIds) {
+            const { channelId, dm } = await userData.get(userId) ?? {};
             const user = this.#client.users.cache.get(userId) ?? await this.#client.users.fetch(userId);
             if (dm) {
                 if (user === undefined) throw Error('DMの取得に失敗しました');
@@ -56,7 +46,7 @@ class songNoticer {
                     console.log('deleate', userId);
                     continue;
                 }
-                const channel = (this.#client.channels.cache.get(channelId) ?? this.#client.channels.fetch(channelId)) as discord.TextChannel | undefined;
+                const channel = (this.#client.channels.cache.get(channelId) ?? await this.#client.channels.fetch(channelId)) as discord.TextChannel | undefined;
                 if (channel?.guild === undefined) throw Error('チャンネルの取得に失敗しました');
                 channel.guild.members.fetch(userId).catch(_ => {
                     console.log('delete', userId);
