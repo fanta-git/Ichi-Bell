@@ -1,25 +1,26 @@
 import * as discord from 'discord.js';
 
 import getAPI from './getKiiteAPI';
-import ResponseIntetaction from './ResponseInteraction';
+import ResponseInteraction from './ResponseInteraction';
 import { PlaylistContents } from './apiTypes';
-import UserDataClass from './UserDataManager';
+import UserDataManager from './UserDataManager';
+import { userData } from './database';
 
 type InteractionFuncs = {
-    (replyManager: ResponseIntetaction, interaction: discord.CommandInteraction): Promise<void>
+    (responseInteraction: ResponseInteraction, interaction: discord.CommandInteraction): Promise<void>
 };
 
 const commandExecuter = async (interaction: discord.Interaction) => {
     if (!interaction.isCommand() || interaction.commandName !== 'ib') return;
     const isKey = <T extends object>(target: any, obj: T): target is keyof T => target in obj;
-    const replyManager = new ResponseIntetaction(interaction);
+    const responseInteraction = new ResponseInteraction(interaction);
     try {
         const command = interaction.options.getSubcommand();
         if (!isKey(command, adaptCommands)) return;
-        await adaptCommands[command](replyManager, interaction);
+        await adaptCommands[command](responseInteraction, interaction);
     } catch (e) {
         if (e instanceof Error) {
-            replyManager.reply({
+            responseInteraction.reply({
                 embeds: [{
                     title: e.name,
                     description: e.message,
@@ -103,8 +104,8 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         const songListData = await getAPI('/api/playlists/contents/detail', { list_id: listId });
         if (songListData.status === 'failed') throw Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 
-        const userData = new UserDataClass(interaction.user.id);
-        await userData.registerNoticeList(songListData, interaction.channelId, !interaction.inGuild());
+        const userDataManager = new UserDataManager(interaction.user.id);
+        await userDataManager.registerNoticeList(songListData, interaction.channelId, !interaction.inGuild());
 
         await replyManager.reply({
             content: '以下のリストを通知リストとして登録しました！',
@@ -113,8 +114,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
     },
     list: async (replyManager, interaction) => {
         replyManager.standby({ ephemeral: true });
-        const userData = new UserDataClass(interaction.user.id);
-        const { registeredList } = await userData.getData();
+        const { registeredList } = await userData.get(interaction.user.id) ?? {};
         if (registeredList === undefined) throw Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
 
         await replyManager.reply({
@@ -124,8 +124,8 @@ const adaptCommands: Record<string, InteractionFuncs> = {
     },
     update: async (replyManager, interaction) => {
         replyManager.standby({ ephemeral: true });
-        const userData = new UserDataClass(interaction.user.id);
-        const songListData = await userData.updateNoticeList(interaction.channelId, !interaction.inGuild());
+        const userDataManager = new UserDataManager(interaction.user.id);
+        const songListData = await userDataManager.updateNoticeList(interaction.channelId, !interaction.inGuild());
 
         await replyManager.reply({
             content: '以下のリストから通知リストを更新しました！',
@@ -135,8 +135,8 @@ const adaptCommands: Record<string, InteractionFuncs> = {
     unregister: async (replyManager, interaction) => {
         const target = interaction.options.getUser('target') ?? interaction.user;
         const isMyself = target.id === interaction.user.id;
-        const userData = new UserDataClass(target.id);
-        const { channelId } = await userData.getData();
+        const userDataManager = new UserDataManager(target.id);
+        const { channelId } = await userData.get(interaction.user.id) ?? {};
         if (!isMyself && interaction.channelId !== channelId) throw Error('指定ユーザーのリスト登録解除は通知先として設定されているチャンネル内で行う必要があります！');
 
         if (!isMyself && !interaction.memberPermissions?.has('MANAGE_CHANNELS')) {
@@ -145,7 +145,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         }
         replyManager.standby({ ephemeral: isMyself });
 
-        await userData.unregisterNoticeList();
+        await userDataManager.unregisterNoticeList();
 
         await replyManager.reply({
             content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
