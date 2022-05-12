@@ -3,7 +3,7 @@ import * as discord from 'discord.js';
 import getAPI from './getKiiteAPI';
 import ResponseInteraction from './ResponseInteraction';
 import { PlaylistContents } from './apiTypes';
-import UserDataManager from './UserDataManager';
+import * as noticeListManager from './noticeListManager';
 import { userData } from './database';
 
 type InteractionFuncs = {
@@ -104,8 +104,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         const songListData = await getAPI('/api/playlists/contents/detail', { list_id: listId });
         if (songListData.status === 'failed') throw Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 
-        const userDataManager = new UserDataManager(interaction.user.id);
-        await userDataManager.registerNoticeList(songListData, interaction.channelId, !interaction.inGuild());
+        await noticeListManager.registerNoticeList(interaction.user.id, interaction.channelId, songListData);
 
         await replyManager.reply({
             content: '以下のリストを通知リストとして登録しました！',
@@ -124,8 +123,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
     },
     update: async (replyManager, interaction) => {
         replyManager.standby({ ephemeral: true });
-        const userDataManager = new UserDataManager(interaction.user.id);
-        const songListData = await userDataManager.updateNoticeList(interaction.channelId, !interaction.inGuild());
+        const songListData = await noticeListManager.updateNoticeList(interaction.user.id, interaction.channelId);
 
         await replyManager.reply({
             content: '以下のリストから通知リストを更新しました！',
@@ -135,7 +133,6 @@ const adaptCommands: Record<string, InteractionFuncs> = {
     unregister: async (replyManager, interaction) => {
         const target = interaction.options.getUser('target') ?? interaction.user;
         const isMyself = target.id === interaction.user.id;
-        const userDataManager = new UserDataManager(target.id);
         const { channelId } = await userData.get(interaction.user.id) ?? {};
         if (!isMyself && interaction.channelId !== channelId) throw Error('指定ユーザーのリスト登録解除は通知先として設定されているチャンネル内で行う必要があります！');
 
@@ -145,7 +142,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         }
         replyManager.standby({ ephemeral: isMyself });
 
-        await userDataManager.unregisterNoticeList();
+        await noticeListManager.unregisterNoticeList(interaction.user.id);
 
         await replyManager.reply({
             content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`

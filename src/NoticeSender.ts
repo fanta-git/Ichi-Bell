@@ -6,12 +6,7 @@ import { noticeList, userData } from './database';
 const NOTICE_MSG = 'リストの曲が流れるよ！';
 
 type recipientData = {
-    isDM: true,
-    user: discord.User,
-    message?: Promise<discord.Message>
-} | {
-    isDM: false,
-    channel: discord.TextChannel,
+    channel: Extract<discord.AnyChannel, { type: 'DM' | 'GUILD_TEXT' }>,
     users: discord.User[],
     message?: Promise<discord.Message>
 };
@@ -32,47 +27,25 @@ class songNoticer {
         if (!userIds) return;
 
         for (const userId of userIds) {
-            const { channelId, dm } = await userData.get(userId) ?? {};
+            const { channelId } = await userData.get(userId) ?? {};
+            if (channelId === undefined) throw Error('userDataが未登録です');
             const user = this.#client.users.cache.get(userId) ?? await this.#client.users.fetch(userId);
-            if (dm) {
-                if (user === undefined) throw Error('DMの取得に失敗しました');
-
-                this.#recipients.push({
-                    isDM: true,
-                    user: user
-                });
-            } else {
-                if (channelId === undefined) {
-                    console.log('deleate', userId);
-                    continue;
-                }
-                const channel = (this.#client.channels.cache.get(channelId) ?? await this.#client.channels.fetch(channelId)) as discord.TextChannel | undefined;
-                if (channel?.guild === undefined) throw Error('チャンネルの取得に失敗しました');
-                channel.guild.members.fetch(userId).catch(_ => {
-                    console.log('delete', userId);
-                });
-                const existsData = this.#recipients.find(v => !v.isDM && v.channel.id === channel.id) as Extract<recipientData, { isDM: false }> | undefined;
-                if (existsData) {
-                    existsData.users.push(user);
-                    continue;
-                }
-                this.#recipients.push({
-                    isDM: false,
-                    users: [user],
+            const channel = this.#client.channels.cache.get(channelId) ?? await this.#client.channels.fetch(channelId);
+            if (channel === null) throw Error('チャンネルの取得に失敗しました');
+            if (channel.type === 'DM' || channel.type === 'GUILD_TEXT') {
+                const recipient = this.#recipients.find(v => v.channel.id === channel.id) ?? {
+                    users: [],
                     channel: channel
-                });
+                };
+                recipient.users.push(user);
+                this.#recipients.push(recipient);
             }
         }
 
         for (const recipient of this.#recipients) {
-            if (recipient.isDM) {
-                const msg = recipient.user.send(NOTICE_MSG);
-                recipient.message = msg;
-            } else {
-                const mention = recipient.users.map(v => `<@${v.id}>`).join('');
-                const msg = recipient.channel.send(mention + NOTICE_MSG);
-                recipient.message = msg;
-            }
+            const mention = recipient.channel.type === 'DM' ? '' : recipient.users.map(v => `<@${v.id}>`).join('');
+            const msg = recipient.channel.send(mention + NOTICE_MSG);
+            recipient.message = msg;
         }
     }
 

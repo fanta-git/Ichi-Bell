@@ -5,7 +5,6 @@ import { PlaylistContents } from './apiTypes';
 type userDataContents = {
     registeredList: PlaylistContents | undefined,
     userId: string | undefined,
-    dm: boolean | undefined,
     channelId: string | undefined
 };
 
