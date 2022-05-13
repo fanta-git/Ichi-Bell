@@ -3,9 +3,9 @@ import Keyv from 'keyv';
 import { PlaylistContents } from './apiTypes';
 
 type userDataContents = {
-    registeredList: PlaylistContents | undefined,
-    userId: string | undefined,
-    channelId: string | undefined
+    registeredList: PlaylistContents,
+    userId: string,
+    channelId: string
 };
 
 const noticeList: Keyv<string[]> = new Keyv('sqlite://db.sqlite', { table: 'noticeList' });

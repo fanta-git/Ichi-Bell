@@ -2,6 +2,7 @@ import * as discord from 'discord.js';
 
 import { ReturnCafeSong } from './apiTypes';
 import { noticeList, userData } from './database';
+import { unregisterNoticeList } from './noticeListManager';
 
 const NOTICE_MSG = 'リストの曲が流れるよ！';
 
@@ -27,18 +28,26 @@ class songNoticer {
         if (!userIds) return;
 
         for (const userId of userIds) {
-            const { channelId } = await userData.get(userId) ?? {};
-            if (channelId === undefined) throw Error('userDataが未登録です');
-            const user = this.#client.users.cache.get(userId) ?? await this.#client.users.fetch(userId);
-            const channel = this.#client.channels.cache.get(channelId) ?? await this.#client.channels.fetch(channelId);
-            if (channel === null) throw Error('チャンネルの取得に失敗しました');
-            if (channel.type === 'DM' || channel.type === 'GUILD_TEXT') {
-                const recipient = this.#recipients.find(v => v.channel.id === channel.id);
-                if (recipient === undefined) {
-                    this.#recipients.push({ users: [user], channel: channel });
-                } else {
-                    recipient.users.push(user);
+            try {
+                const { channelId } = await userData.get(userId) ?? {};
+                if (channelId === undefined) return;
+                const user = await this.#client.users.fetch(userId);
+                const channel = await this.#client.channels.fetch(channelId);
+                if (channel === null) return unregisterNoticeList(userId);
+                if (channel.type === 'DM' || channel.type === 'GUILD_TEXT') {
+                    const recipient = this.#recipients.find(v => v.channel.id === channel.id);
+                    if (recipient === undefined) {
+                        this.#recipients.push({ users: [user], channel: channel });
+                    } else {
+                        recipient.users.push(user);
+                    }
                 }
+            } catch (error) {
+                if (
+                    error instanceof Error &&
+                    ['Missing Access', 'Unknown Channel'].includes(error.message)
+                ) return unregisterNoticeList(userId);
+                throw error;
             }
         }
 
