@@ -14,12 +14,12 @@ type recipientData = {
 class songNoticer {
     #client: discord.Client;
     #songData: ReturnCafeSong;
-    #recipients: Record<string, recipientData>;
+    #recipients: recipientData[];
 
     constructor (client: discord.Client, songData: ReturnCafeSong) {
         this.#client = client;
         this.#songData = songData;
-        this.#recipients = {};
+        this.#recipients = [];
     }
 
     async sendNotice () {
@@ -33,12 +33,16 @@ class songNoticer {
             const channel = this.#client.channels.cache.get(channelId) ?? await this.#client.channels.fetch(channelId);
             if (channel === null) throw Error('チャンネルの取得に失敗しました');
             if (channel.type === 'DM' || channel.type === 'GUILD_TEXT') {
-                const recipient = this.#recipients[channel.id] ??= { users: [], channel: channel };
-                recipient.users.push(user);
+                const recipient = this.#recipients.find(v => v.channel.id === channel.id);
+                if (recipient === undefined) {
+                    this.#recipients.push({ users: [user], channel: channel });
+                } else {
+                    recipient.users.push(user);
+                }
             }
         }
 
-        for (const recipient of Object.values(this.#recipients)) {
+        for (const recipient of this.#recipients) {
             const mention = recipient.channel.type === 'DM' ? '' : recipient.users.map(v => `<@${v.id}>`).join('');
             const msg = recipient.channel.send(mention + NOTICE_MSG);
             recipient.message = msg;
@@ -46,7 +50,7 @@ class songNoticer {
     }
 
     async updateNotice () {
-        for (const recipient of Object.values(this.#recipients)) {
+        for (const recipient of this.#recipients) {
             const msg = await recipient.message;
             if (msg === undefined) continue;
             msg.edit(msg.content.replace(NOTICE_MSG, `__${this.#songData.title}__が流れたよ！`));
