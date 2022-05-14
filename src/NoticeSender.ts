@@ -5,9 +5,12 @@ import { noticeList, userData } from './database';
 import { unregisterNoticeList } from './noticeListManager';
 
 const NOTICE_MSG = 'リストの曲が流れるよ！';
+const ALLOW_CHANNEL_TYPE = ['DM', 'GUILD_TEXT'] as const;
+const ALLOW_ERROR = ['Missing Access', 'Unknown Channel'];
 
+type arrowChannels = Extract<discord.AnyChannel, { type: typeof ALLOW_CHANNEL_TYPE[number] }>;
 type recipientData = {
-    channel: Extract<discord.AnyChannel, { type: 'DM' | 'GUILD_TEXT' }>,
+    channel: arrowChannels,
     users: discord.User[],
     message?: Promise<discord.Message>
 };
@@ -25,16 +28,19 @@ class songNoticer {
 
     async sendNotice () {
         const userIds = await noticeList.get(this.#songData.video_id);
-        if (!userIds) return;
+        if (!userIds) return false;
 
         for (const userId of userIds) {
             try {
                 const { channelId } = await userData.get(userId) ?? {};
-                if (channelId === undefined) return;
+                if (channelId === undefined) continue;
                 const user = await this.#client.users.fetch(userId);
                 const channel = await this.#client.channels.fetch(channelId);
-                if (channel === null) return unregisterNoticeList(userId);
-                if (channel.type === 'DM' || channel.type === 'GUILD_TEXT') {
+                if (channel === null) {
+                    unregisterNoticeList(userId);
+                    continue;
+                }
+                if (isChannelAllowed(channel)) {
                     const recipient = this.#recipients.find(v => v.channel.id === channel.id);
                     if (recipient === undefined) {
                         this.#recipients.push({ users: [user], channel: channel });
@@ -43,11 +49,11 @@ class songNoticer {
                     }
                 }
             } catch (error) {
-                if (
-                    error instanceof Error &&
-                    ['Missing Access', 'Unknown Channel'].includes(error.message)
-                ) return unregisterNoticeList(userId);
-                throw error;
+                if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
+                    unregisterNoticeList(userId);
+                } else {
+                    throw error;
+                }
             }
         }
 
@@ -56,6 +62,7 @@ class songNoticer {
             const msg = recipient.channel.send(mention + NOTICE_MSG);
             recipient.message = msg;
         }
+        return true;
     }
 
     async updateNotice () {
@@ -66,5 +73,7 @@ class songNoticer {
         }
     }
 }
+
+const isChannelAllowed = (value: discord.AnyChannel): value is arrowChannels => ALLOW_CHANNEL_TYPE.some(v => value.type === v);
 
 export default songNoticer;
