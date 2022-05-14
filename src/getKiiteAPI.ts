@@ -12,7 +12,7 @@ const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
     stc.apiCallHist.shift();
     stc.apiCallHist.push(now.getTime() + waitTime);
     if (waitTime) await new Promise(resolve => setTimeout(resolve, waitTime));
-    console.log('APIを呼び出しました');
+    console.log(`[${getDateString(new Date())}] ${url}`);
 
     const { response, body } = await new Promise(resolve =>
         request(
@@ -30,5 +30,8 @@ const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
         throw new Error(`[${response.statusCode}]${response.statusMessage}`);
     }
 };
+
+const getDateString = (date: Date) =>
+    `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}.${date.getMilliseconds().toString().padStart(3, '0')}`;
 
 export default getKiiteAPI;
