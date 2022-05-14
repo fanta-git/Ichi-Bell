@@ -8,31 +8,33 @@ const RUN_LIMIT = Number(process.env.REBOOT_HOUR) * 3600e3 || Infinity;
 const REBOOT_NEED_SONGDURATION = 3 * 60e3;
 const NOTICE_AGO = 60e3;
 const API_UPDATE_WAIT = 3e3;
-const API_ERROR_WAIT = 15e3;
+const API_ERROR_WAIT = 5e3;
 
 const observeNextSong = async (client: discord.Client) => {
     const launchedTime = Date.now();
-    let isGetNext = false;
+    let nowSongSender: NoticeSender | undefined;
     while (true) {
         try {
-            const apiUrl = isGetNext ? '/api/cafe/next_song' : '/api/cafe/now_playing';
-            const cafeSongData = await getKiiteAPI(apiUrl);
-            const startTime = new Date(cafeSongData.start_time).getTime();
-            const endTime = startTime + Math.min(cafeSongData.msec_duration, DURATION_MAX);
-            const sender = new NoticeSender(client, cafeSongData);
-            if (isGetNext) sender.sendNotice();
+            const nowSong = await getKiiteAPI('/api/cafe/now_playing');
+            const nowSongEndTime = ISOtoMS(nowSong.start_time) + Math.min(nowSong.msec_duration, DURATION_MAX);
+            client.user?.setActivity({ name: nowSong.title, type: 'LISTENING' });
+            await timer(nowSongEndTime - NOTICE_AGO - Date.now());
 
-            await timer(Math.max(startTime - Date.now(), 0));
+            const nextSong = await getKiiteAPI('/api/cafe/next_song');
+            const nextSongEndTime = ISOtoMS(nextSong.start_time) + Math.min(nextSong.msec_duration, DURATION_MAX);
+            const noticeSender = new NoticeSender(client, nextSong);
+            const senderStatePromise = noticeSender.sendNotice();
 
-            sender.updateNotice();
+            await timer(nowSongEndTime - Date.now());
+
+            nowSongSender?.updateNotice();
+            nowSongSender = noticeSender;
 
             const isOverLimit = Date.now() - launchedTime > RUN_LIMIT;
-            const haveAllowance = endTime - Date.now() > REBOOT_NEED_SONGDURATION;
-            if (isOverLimit && haveAllowance) break;
-            client.user?.setActivity({ name: cafeSongData.title, type: 'LISTENING' });
+            const haveAllowance = nextSongEndTime - Date.now() > REBOOT_NEED_SONGDURATION;
+            if (isOverLimit && haveAllowance && !(await senderStatePromise)) break;
 
-            await timer(Math.max(endTime - NOTICE_AGO - Date.now(), isGetNext ? API_UPDATE_WAIT : 0));
-            isGetNext = Date.now() < endTime as boolean;
+            await timer(API_UPDATE_WAIT);
         } catch (e) {
             console.error(e);
             await timer(API_ERROR_WAIT);
@@ -40,6 +42,7 @@ const observeNextSong = async (client: discord.Client) => {
     }
 };
 
-const timer = (waitTimeMs: number) => new Promise(resolve => setTimeout(resolve, waitTimeMs));
+const timer = (waitTimeMs: number) => new Promise(resolve => waitTimeMs > 0 ? setTimeout(resolve, waitTimeMs) : resolve(-1));
+const ISOtoMS = (iso: string) => new Date(iso).getTime();
 
 export default observeNextSong;
