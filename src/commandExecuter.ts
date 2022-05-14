@@ -11,11 +11,11 @@ type InteractionFuncs = {
 };
 
 const commandExecuter = async (interaction: discord.Interaction) => {
-    if (!interaction.isCommand() || interaction.commandName !== 'ib') return;
+    if (!interaction.isCommand()) return;
     const isKey = <T extends object>(target: any, obj: T): target is keyof T => target in obj;
     const responseInteraction = new ResponseInteraction(interaction);
     try {
-        const command = interaction.options.getSubcommand();
+        const command = interaction.commandName;
         if (!isKey(command, adaptCommands)) return;
         await adaptCommands[command](responseInteraction, interaction);
     } catch (e) {
@@ -114,7 +114,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
     list: async (replyManager, interaction) => {
         replyManager.standby({ ephemeral: true });
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
-        if (registeredList === undefined) throw Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
+        if (registeredList === undefined) throw Error('リストが登録されていません！`/register`コマンドを使ってリストを登録しましょう！');
 
         await replyManager.reply({
             content: '以下のリストが通知リストとして登録されています！',

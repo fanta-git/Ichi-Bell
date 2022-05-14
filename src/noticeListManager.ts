@@ -21,7 +21,7 @@ const registerNoticeList = async (userId: string, channelId: string, playlistDat
 
 const updateNoticeList = async (userId: string, channelId: string) => {
     const { registeredList, channelId: registedChannelId } = await userData.get(userId) ?? {};
-    if (registeredList === undefined) throw Error('リストが登録されていません！`/ib register`コマンドを使ってリストを登録しましょう！');
+    if (registeredList === undefined) throw Error('リストが登録されていません！`/register`コマンドを使ってリストを登録しましょう！');
     const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
     if (songListData.status === 'failed') throw Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
     if (registedChannelId === channelId && songListData.updated_at === registeredList.updated_at) throw Error('プレイリストは最新の状態です！');
