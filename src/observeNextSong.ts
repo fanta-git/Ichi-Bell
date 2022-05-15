@@ -7,6 +7,7 @@ const DURATION_MAX = 8 * 60e3;
 const RUN_LIMIT = Number(process.env.REBOOT_HOUR) * 3600e3 || Infinity;
 const REBOOT_NEED_SONGDURATION = 3 * 60e3;
 const NOTICE_AGO = 60e3;
+const GET_NEXTSONG_INTERVAL = 30e3;
 const API_UPDATE_WAIT = 3e3;
 const API_ERROR_WAIT = 5e3;
 
@@ -16,16 +17,15 @@ const observeNextSong = async (client: discord.Client) => {
     while (true) {
         try {
             const nowSong = await getKiiteAPI('/api/cafe/now_playing');
-            const nowSongEndTime = ISOtoMS(nowSong.start_time) + Math.min(nowSong.msec_duration, DURATION_MAX);
             client.user?.setActivity({ name: nowSong.title, type: 'LISTENING' });
-            await timer(nowSongEndTime - NOTICE_AGO - Date.now());
 
-            const nextSong = await getKiiteAPI('/api/cafe/next_song');
-            const nextSongEndTime = ISOtoMS(nextSong.start_time) + Math.min(nextSong.msec_duration, DURATION_MAX);
+            const nextSong = await getNextSong();
+            const nextSongStartTime = ISOtoMS(nextSong.start_time);
+            const nextSongEndTime = nextSongStartTime + Math.min(nextSong.msec_duration, DURATION_MAX);
             const noticeSender = new NoticeSender(client, nextSong);
             const senderStatePromise = noticeSender.sendNotice();
 
-            await timer(nowSongEndTime - Date.now());
+            await timer(nextSongStartTime - Date.now());
 
             nowSongSender?.updateNotice();
             nowSongSender = noticeSender;
@@ -39,6 +39,18 @@ const observeNextSong = async (client: discord.Client) => {
             console.error(e);
             await timer(API_ERROR_WAIT);
         }
+    }
+};
+
+const getNextSong = async () => {
+    while (true) {
+        const nextSong = await getKiiteAPI('/api/cafe/next_song');
+        const nextSongEndTime = ISOtoMS(nextSong.start_time) - Date.now();
+        if (nextSongEndTime < NOTICE_AGO + GET_NEXTSONG_INTERVAL) {
+            await timer(nextSongEndTime - NOTICE_AGO);
+            return nextSong;
+        }
+        await timer(GET_NEXTSONG_INTERVAL);
     }
 };
 
