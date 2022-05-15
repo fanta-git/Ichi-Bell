@@ -135,7 +135,6 @@ export type FailedPlaylistContents = {
 };
 
 export type FuncAPI = {
-    staticVariable?: { apiCallHist: number[] }
     (url: '/api/cafe/now_playing' | '/api/cafe/next_song', queryParam?: {}): Promise<ReturnCafeSong>,
     (url: '/api/cafe/user_count', queryParam?: {}): Promise<number>,
     (url: '/api/songs/by_video_ids', queryParam: { video_ids: string }): Promise<ReturnSongData[]>

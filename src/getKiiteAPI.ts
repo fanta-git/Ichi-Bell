@@ -1,24 +1,26 @@
 import request from 'request';
 
 import { FuncAPI } from './apiTypes';
-require('dotenv').config();
+
+const API_CALL_MAX_PER_SECOND = 4;
 
 const port = Number(process.env.POOT) ?? 5000;
+const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 
 const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
-    const now = new Date();
-    const stc = getKiiteAPI.staticVariable ??= { apiCallHist: new Array<number>(4).fill(0) };
-    const waitTime = Math.max(stc.apiCallHist[0] + 1e3 - now.getTime(), 0);
-    stc.apiCallHist.shift();
-    stc.apiCallHist.push(now.getTime() + waitTime);
-    if (waitTime) await new Promise(resolve => setTimeout(resolve, waitTime));
-    console.log(`[${getDateString(new Date())}] ${url}`);
+    const nowTime = Date.now();
+    const waitTime = Math.max(apiCallHist[0] + 1e3 - nowTime, 0);
+    apiCallHist.shift();
+    apiCallHist.push(nowTime + waitTime);
+    if (waitTime > 0) await new Promise(resolve => setTimeout(resolve, waitTime));
+    const formated = getDateString(new Date());
+    console.log(`[${formated}] ${url}`);
 
-    const { response, body } = await new Promise(resolve =>
+    const { error, response, body } = await new Promise(resolve =>
         request(
             { url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true, port: port },
             (error, response, body) => {
-                resolve(Object.assign({}, { error: error, response: response, body: body }));
+                resolve({ error: error, response: response, body: body });
             }
         )
     );
@@ -27,6 +29,7 @@ const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
         return body;
     } else {
         console.error(response);
+        console.error(error);
         throw new Error(`[${response.statusCode}]${response.statusMessage}`);
     }
 };
