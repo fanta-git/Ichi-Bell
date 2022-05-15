@@ -1,7 +1,7 @@
 import * as discord from 'discord.js';
 
 import { ReturnCafeSong } from './apiTypes';
-import { noticeList, userData } from './database';
+import { noticeList, userData, utilData } from './database';
 import { unregisterNoticeList } from './noticeListManager';
 
 const NOTICE_MSG = 'リストの曲が流れるよ！';
@@ -27,6 +27,10 @@ class songNoticer {
     }
 
     async sendNotice () {
+        const lastSendSong = await utilData.get('lastSendSong');
+        if (lastSendSong && lastSendSong.id === this.#songData.id) return false;
+        utilData.set('lastSendSong', this.#songData);
+
         const userIds = await noticeList.get(this.#songData.video_id);
         if (!userIds) return false;
 

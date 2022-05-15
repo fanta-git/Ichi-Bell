@@ -9,21 +9,22 @@ const REBOOT_NEED_SONGDURATION = 3 * 60e3;
 const NOTICE_AGO = 60e3;
 const GET_NEXTSONG_INTERVAL = 30e3;
 const API_UPDATE_WAIT = 3e3;
-const API_ERROR_WAIT = 5e3;
+const API_ERROR_WAIT = 10e3;
 
 const observeNextSong = async (client: discord.Client) => {
     const launchedTime = Date.now();
     let nowSongSender: NoticeSender | undefined;
     while (true) {
         try {
-            const nowSong = await getKiiteAPI('/api/cafe/now_playing');
-            client.user?.setActivity({ name: nowSong.title, type: 'LISTENING' });
+            getKiiteAPI('/api/cafe/now_playing')
+                .then(ret => client.user?.setActivity({ name: ret.title, type: 'LISTENING' }));
 
             const nextSong = await getNextSong();
             const nextSongStartTime = ISOtoMS(nextSong.start_time);
             const nextSongEndTime = nextSongStartTime + Math.min(nextSong.msec_duration, DURATION_MAX);
             const noticeSender = new NoticeSender(client, nextSong);
             const senderStatePromise = noticeSender.sendNotice();
+            console.log('send!');
 
             await timer(nextSongStartTime - Date.now());
 
@@ -45,9 +46,9 @@ const observeNextSong = async (client: discord.Client) => {
 const getNextSong = async () => {
     while (true) {
         const nextSong = await getKiiteAPI('/api/cafe/next_song');
-        const nextSongRemaind = ISOtoMS(nextSong.start_time) - Date.now();
-        if (nextSongRemaind < NOTICE_AGO + GET_NEXTSONG_INTERVAL) {
-            await timer(nextSongRemaind - NOTICE_AGO);
+        const noticeRemaind = ISOtoMS(nextSong.start_time) - NOTICE_AGO - Date.now();
+        if (noticeRemaind < GET_NEXTSONG_INTERVAL) {
+            await timer(noticeRemaind);
             return nextSong;
         }
         await timer(GET_NEXTSONG_INTERVAL);
