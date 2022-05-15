@@ -30,9 +30,9 @@ const observeNextSong = async (client: discord.Client) => {
             nowSongSender?.updateNotice();
             nowSongSender = noticeSender;
 
-            const isOverLimit = Date.now() - launchedTime > RUN_LIMIT;
+            const isLimitOver = Date.now() > launchedTime + RUN_LIMIT;
             const haveAllowance = nextSongEndTime - Date.now() > REBOOT_NEED_SONGDURATION;
-            if (isOverLimit && haveAllowance && !(await senderStatePromise)) break;
+            if (isLimitOver && haveAllowance && !await senderStatePromise) break;
 
             await timer(API_UPDATE_WAIT);
         } catch (e) {
@@ -45,16 +45,18 @@ const observeNextSong = async (client: discord.Client) => {
 const getNextSong = async () => {
     while (true) {
         const nextSong = await getKiiteAPI('/api/cafe/next_song');
-        const nextSongEndTime = ISOtoMS(nextSong.start_time) - Date.now();
-        if (nextSongEndTime < NOTICE_AGO + GET_NEXTSONG_INTERVAL) {
-            await timer(nextSongEndTime - NOTICE_AGO);
+        const nextSongRemaind = ISOtoMS(nextSong.start_time) - Date.now();
+        if (nextSongRemaind < NOTICE_AGO + GET_NEXTSONG_INTERVAL) {
+            await timer(nextSongRemaind - NOTICE_AGO);
             return nextSong;
         }
         await timer(GET_NEXTSONG_INTERVAL);
     }
 };
 
-const timer = (waitTimeMs: number) => new Promise(resolve => waitTimeMs > 0 ? setTimeout(resolve, waitTimeMs) : resolve(-1));
+const timer = (waitTimeMS: number) => new Promise(
+    resolve => waitTimeMS > 0 ? setTimeout(() => resolve(true), waitTimeMS) : resolve(false)
+);
 const ISOtoMS = (iso: string) => new Date(iso).getTime();
 
 export default observeNextSong;

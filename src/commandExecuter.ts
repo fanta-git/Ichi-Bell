@@ -1,26 +1,26 @@
 import * as discord from 'discord.js';
 
 import getAPI from './getKiiteAPI';
-import ResponseInteraction from './ResponseInteraction';
+import InteractionReplyer from './ResponseInteraction';
 import { PlaylistContents } from './apiTypes';
 import * as noticeListManager from './noticeListManager';
 import { userData } from './database';
 
 type InteractionFuncs = {
-    (responseInteraction: ResponseInteraction, interaction: discord.CommandInteraction): Promise<void>
+    (interactionReplyer: InteractionReplyer, interaction: discord.CommandInteraction): Promise<void>
 };
 
 const commandExecuter = async (interaction: discord.Interaction) => {
     if (!interaction.isCommand()) return;
     const isKey = <T extends object>(target: any, obj: T): target is keyof T => target in obj;
-    const responseInteraction = new ResponseInteraction(interaction);
+    const interactionReplyer = new InteractionReplyer(interaction);
     try {
         const command = interaction.commandName;
         if (!isKey(command, adaptCommands)) return;
-        await adaptCommands[command](responseInteraction, interaction);
+        await adaptCommands[command](interactionReplyer, interaction);
     } catch (e) {
         if (e instanceof Error) {
-            responseInteraction.reply({
+            interactionReplyer.reply({
                 embeds: [{
                     title: e.name,
                     description: e.message,

@@ -1,6 +1,6 @@
 import * as discord from 'discord.js';
 
-class ResponseInteraction {
+class InteractionReplyer {
     #interaction: discord.CommandInteraction<discord.CacheType>;
     #options: discord.InteractionDeferReplyOptions | undefined;
     #timeout: ReturnType<typeof setTimeout> | undefined;
@@ -24,4 +24,4 @@ class ResponseInteraction {
     }
 }
 
-export default ResponseInteraction;
+export default InteractionReplyer;

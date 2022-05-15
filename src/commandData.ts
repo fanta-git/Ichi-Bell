@@ -1,6 +1,6 @@
 import * as discord from 'discord.js';
 
-const commandData = [
+const commandData: discord.ApplicationCommandDataResolvable[] = [
     {
         name: 'now',
         description: 'Cafeで今流れている曲やCafeにいる人数などを表示します'
@@ -33,6 +33,6 @@ const commandData = [
             required: false
         }]
     }
-] as discord.ApplicationCommandDataResolvable[];
+];
 
 export default commandData;
