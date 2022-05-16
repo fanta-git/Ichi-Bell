@@ -24,7 +24,6 @@ const observeNextSong = async (client: discord.Client) => {
             const nextSongEndTime = nextSongStartTime + Math.min(nextSong.msec_duration, DURATION_MAX);
             const noticeSender = new NoticeSender(client, nextSong);
             const senderStatePromise = noticeSender.sendNotice();
-            console.log('send!');
 
             await timer(nextSongStartTime - Date.now());
 
