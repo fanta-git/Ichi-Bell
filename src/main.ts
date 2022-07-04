@@ -11,7 +11,7 @@ const client = new discord.Client({ intents: ['GUILDS'] });
 dotenv.config();
 
 client.once('ready', () => {
-    console.log('%s Ready!', client.user?.tag);
+    console.log(`${client.user?.tag} Ready!`);
 
     observeNextSong(client).then(() => {
         server.close();

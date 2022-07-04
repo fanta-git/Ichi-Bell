@@ -28,11 +28,10 @@ class songNoticer {
 
     async sendNotice () {
         const lastSendSong = await utilData.get('lastSendSong');
-        if (lastSendSong && lastSendSong.id === this.#songData.id) return false;
+        if (lastSendSong && lastSendSong.id === this.#songData.id) return;
         utilData.set('lastSendSong', this.#songData);
 
-        const userIds = await noticeList.get(this.#songData.video_id);
-        if (!userIds) return false;
+        const userIds = await noticeList.get(this.#songData.video_id) ?? [];
 
         for (const userId of userIds) {
             try {
@@ -62,11 +61,19 @@ class songNoticer {
         }
 
         for (const recipient of this.#recipients) {
-            const mention = recipient.channel.type === 'DM' ? '' : recipient.users.map(v => `<@${v.id}>`).join('');
-            const msg = recipient.channel.send(mention + NOTICE_MSG);
-            recipient.message = msg;
+            try {
+                const mention = recipient.channel.type === 'DM' ? '' : recipient.users.map(v => `<@${v.id}>`).join('');
+                const msg = recipient.channel.send(mention + NOTICE_MSG);
+                recipient.message = msg;
+            } catch (error) {
+                if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
+                    for (const user of recipient.users) unregisterNoticeList(user.id);
+                } else {
+                    throw error;
+                }
+            }
         }
-        return true;
+        return userIds;
     }
 
     async updateNotice () {

@@ -23,18 +23,16 @@ const observeNextSong = async (client: discord.Client) => {
             const nextSongStartTime = ISOtoMS(nextSong.start_time);
             const nextSongEndTime = nextSongStartTime + Math.min(nextSong.msec_duration, DURATION_MAX);
             const noticeSender = new NoticeSender(client, nextSong);
-            const senderStatePromise = noticeSender.sendNotice();
-
-            await timer(nextSongStartTime - Date.now());
+            const sendedUserIdsPromise = noticeSender.sendNotice();
 
             nowSongSender?.updateNotice();
             nowSongSender = noticeSender;
 
             const isLimitOver = Date.now() > launchedTime + RUN_LIMIT;
             const haveAllowance = nextSongEndTime - Date.now() > REBOOT_NEED_SONGDURATION;
-            if (isLimitOver && haveAllowance && !await senderStatePromise) break;
+            if (isLimitOver && haveAllowance && (await sendedUserIdsPromise)?.length === 0) break;
 
-            await timer(API_UPDATE_WAIT);
+            await timer(nextSongStartTime - Date.now() + API_UPDATE_WAIT);
         } catch (e) {
             console.error(e);
             await timer(API_ERROR_WAIT);
