@@ -20,7 +20,7 @@ const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
         request(
             { url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true, port: port },
             (error, response, body) => {
-                resolve({ error: error, response: response, body: body });
+                resolve({ error, response, body });
             }
         )
     );

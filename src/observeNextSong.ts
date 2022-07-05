@@ -13,7 +13,6 @@ const API_ERROR_WAIT = 10e3;
 
 const observeNextSong = async (client: discord.Client) => {
     const launchedTime = Date.now();
-    let nowSongSender: NoticeSender | undefined;
     while (true) {
         try {
             getKiiteAPI('/api/cafe/now_playing')
@@ -23,16 +22,16 @@ const observeNextSong = async (client: discord.Client) => {
             const nextSongStartTime = ISOtoMS(nextSong.start_time);
             const nextSongEndTime = nextSongStartTime + Math.min(nextSong.msec_duration, DURATION_MAX);
             const noticeSender = new NoticeSender(client, nextSong);
-            const sendedUserIdsPromise = noticeSender.sendNotice();
+            noticeSender.sendNotice();
 
-            nowSongSender?.updateNotice();
-            nowSongSender = noticeSender;
+            await timer(nextSongStartTime - Date.now());
+            noticeSender.updateNotice();
 
             const isLimitOver = Date.now() > launchedTime + RUN_LIMIT;
             const haveAllowance = nextSongEndTime - Date.now() > REBOOT_NEED_SONGDURATION;
-            if (isLimitOver && haveAllowance && (await sendedUserIdsPromise)?.length === 0) break;
+            if (isLimitOver && haveAllowance) break;
 
-            await timer(nextSongStartTime - Date.now() + API_UPDATE_WAIT);
+            await timer(API_UPDATE_WAIT);
         } catch (e) {
             console.error(e);
             await timer(API_ERROR_WAIT);
