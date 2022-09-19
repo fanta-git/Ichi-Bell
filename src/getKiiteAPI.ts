@@ -1,10 +1,9 @@
-import request from 'request';
+import fetch from 'node-fetch';
 
 import { FuncAPI } from './apiTypes';
 
 const API_CALL_MAX_PER_SECOND = 4;
 
-const port = Number(process.env.POOT) ?? 5000;
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 
 const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
@@ -16,21 +15,15 @@ const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
     const formated = getDateString(new Date());
     console.log(`[${formated}] ${url}`);
 
-    const { error, response, body } = await new Promise(resolve =>
-        request(
-            { url: 'https://cafe.kiite.jp' + url, qs: queryParam, json: true, port: port },
-            (error, response, body) => {
-                resolve({ error, response, body });
-            }
-        )
-    );
+    const query = Array.from(Object.entries(queryParam), ([key, val]) => `${key}=${val}`).join(',');
+    const response = await fetch(`https://cafeapi.kiite.jp${url}?${query}`);
 
-    if (response?.statusCode === 200) {
-        return body;
+    if (response.ok) {
+        return await response.json() as any;
     } else {
-        console.error(response);
-        console.error(error);
-        throw new Error(`[${response.statusCode}]${response.statusMessage}`);
+        const message = `${response.status}: ${response.statusText}`;
+        console.error(message);
+        throw new Error(message);
     }
 };
 
