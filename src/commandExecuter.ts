@@ -5,7 +5,7 @@ import InteractionReplyer from './ResponseInteraction';
 import { PlaylistContents } from './apiTypes';
 import * as noticeListManager from './noticeListManager';
 import { userData } from './database';
-import Pages from './pages';
+import Pages from './Pages';
 
 type InteractionFuncs = {
     (interactionReplyer: InteractionReplyer, interaction: discord.CommandInteraction): Promise<void>
@@ -40,6 +40,13 @@ const makePlaylistEmbeds = (playlist: PlaylistContents) => [{
     description: `**全${playlist.songs.length}曲**\n${playlist.description}`,
     footer: { text: `最終更新: ${playlist.updated_at}` }
 }];
+
+const sliceByNumber = <T>(array: T[], number: number):T[][] => {
+    const length = Math.ceil(array.length / number);
+    return new Array(length).fill(undefined).map((_, i) =>
+        array.slice(i * number, (i + 1) * number)
+    );
+};
 
 const adaptCommands: Record<string, InteractionFuncs> = {
     now: async (replyManager) => {
@@ -113,14 +120,24 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         });
     },
     list: async (replyManager, interaction) => {
-        replyManager.standby({ ephemeral: true });
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
         if (registeredList === undefined) throw Error('リストが登録されていません！`/register`コマンドを使ってリストを登録しましょう！');
 
-        await replyManager.reply({
-            content: '以下のリストが通知リストとして登録されています！',
-            embeds: makePlaylistEmbeds(registeredList)
-        });
+        const videoIds = registeredList.songs.map(v => v.video_id).join(',');
+        const details = await getAPI('/api/songs/by_video_ids', { video_ids: videoIds });
+        const played = await getAPI('/api/cafe/played', { video_ids: videoIds });
+        const e: discord.MessageEmbedOptions[] = sliceByNumber(registeredList.songs, 10).map((v, i, { length }) => ({
+            title: registeredList.list_title,
+            fields: [{
+                name: `${i + 1}/${length}`,
+                value: v.map(vv => (
+                    `__${details.find(vvv => vvv.video_id === vv.video_id)?.title ?? '???'}__\n└${played.find(vvv => vvv.video_id === vv.video_id)?.start_time ?? '選曲可能'}\n`
+                )).join('')
+            }]
+        }));
+
+        const p = new Pages(interaction, e);
+        p.send();
     },
     update: async (replyManager, interaction) => {
         replyManager.standby({ ephemeral: true });
@@ -150,9 +167,14 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         });
     },
     test: async (replyManager, interaction) => {
-        const p = new Pages(interaction, i => ({
-            title: String(i)
-        }));
+        const p = new Pages(interaction, [
+            { title: '0' },
+            { title: '1' },
+            { title: '2' },
+            { title: '3' },
+            { title: '4' },
+            { title: '5' }
+        ]);
         p.send();
     }
 };

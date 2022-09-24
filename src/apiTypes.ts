@@ -71,7 +71,7 @@ export type ReturnCafeSong = {
     request_user_ids: number[],
     created_at: string,
     updated_at: string,
-    reasons: Array<SelectReasons>,
+    reasons: SelectReasons[],
     thumbnail: string,
     new_fav_user_ids: number[] | null,
     baseinfo: NicovideoData,
@@ -134,6 +134,13 @@ export type FailedPlaylistContents = {
     }
 };
 
+export type PlayedSongs = {
+    id: null,
+    video_id: string,
+    start_time: string,
+    reasons: SelectReasons[]
+};
+
 export type FuncAPI = {
     (url: '/api/cafe/now_playing' | '/api/cafe/next_song', queryParam?: {}): Promise<ReturnCafeSong>,
     (url: '/api/cafe/user_count', queryParam?: {}): Promise<number>,
@@ -143,4 +150,5 @@ export type FuncAPI = {
     (url: '/api/cafe/timetable', queryParam: { limit: number, with_comment: true }): Promise<RetrunCafeSongWithComment[]>
     (url: '/api/artist/id', queryParam: { artist_id: number | string }): Promise<ArtistData> | null
     (url: '/api/playlists/contents/detail', queryParam: { list_id: string }): Promise<PlaylistContents | FailedPlaylistContents>
+    (url: '/api/cafe/played', queryParam: { video_ids: string }): Promise<PlayedSongs[]>
 };
