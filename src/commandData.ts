@@ -32,6 +32,10 @@ const commandData: discord.ApplicationCommandDataResolvable[] = [
             description: '登録を解除させたいユーザー（ユーザー指定にはチャンネルの管理権限が必要です）',
             required: false
         }]
+    },
+    {
+        name: 'test',
+        description: 'for test'
     }
 ];
 

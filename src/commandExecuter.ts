@@ -5,6 +5,7 @@ import InteractionReplyer from './ResponseInteraction';
 import { PlaylistContents } from './apiTypes';
 import * as noticeListManager from './noticeListManager';
 import { userData } from './database';
+import Pages from './pages';
 
 type InteractionFuncs = {
     (interactionReplyer: InteractionReplyer, interaction: discord.CommandInteraction): Promise<void>
@@ -147,6 +148,12 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         await replyManager.reply({
             content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
         });
+    },
+    test: async (replyManager, interaction) => {
+        const p = new Pages(interaction, i => ({
+            title: String(i)
+        }));
+        p.send();
     }
 };
 
