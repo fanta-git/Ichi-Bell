@@ -2,7 +2,8 @@ import discord, { MessageActionRow } from 'discord.js';
 
 const CUSTOM_ID = {
     BACK: 'back',
-    FORWARD: 'forward'
+    FORWARD: 'forward',
+    SELECT: 'select'
 } as const;
 
 class Pages {
@@ -46,32 +47,40 @@ class Pages {
                 this.currentPage++;
             }
 
+            if (inter.customId === CUSTOM_ID.SELECT && inter.isSelectMenu()) {
+                this.currentPage = Number(inter.values[0]);
+            }
+
             inter.update(this.getMessage());
         });
     }
 
-    private getMessage (): discord.InteractionReplyOptions {
+    private getMessage () {
         const select = new discord.MessageSelectMenu({
-            custom_id: 's',
+            custom_id: CUSTOM_ID.SELECT,
             type: 'SELECT_MENU',
-            options: Array(10).fill(undefined).map((_, i) => ({ label: String(i), value: String(i), default: i === 3 }))
+            options: Array(this.embeds.length).fill(undefined).map((_, i) => ({
+                label: `${i + 1}ページ目`,
+                value: String(i),
+                default: i === this.currentPage
+            }))
         });
-        let components: discord.MessageActionRowComponent[];
+        let turnPage: discord.MessageActionRowComponent[];
 
         if (this.embeds.length === 0) {
-            components = [];
+            turnPage = [];
         } else if (this.currentPage === 0) {
-            components = [Object.assign({ disabled: true }, this.button.back), this.button.forward];
+            turnPage = [Object.assign({}, this.button.back, { disabled: true }), this.button.forward];
         } else if (this.currentPage === this.embeds.length - 1) {
-            components = [this.button.back, Object.assign({ disabled: true }, this.button.forward)];
+            turnPage = [this.button.back, Object.assign({}, this.button.forward, { disabled: true })];
         } else {
-            components = [this.button.back, this.button.forward];
+            turnPage = [this.button.back, this.button.forward];
         }
 
         return {
             embeds: [this.embeds[this.currentPage]],
             components: [
-                new MessageActionRow({ components }),
+                new MessageActionRow({ components: turnPage }),
                 new MessageActionRow({ components: [select] })
             ]
         };
