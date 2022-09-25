@@ -35,7 +35,9 @@ class songNoticer {
 
         for (const userId of userIds) {
             try {
-                const { channelId } = await userData.get(userId) ?? {};
+                const { channelId, registeredList } = await userData.get(userId) ?? {};
+                if (registeredList === undefined) continue;
+                if (registeredList.songs.some(v => v.video_id === this.#songData.video_id)) continue;
                 if (channelId === undefined) continue;
                 const user = await this.#client.users.fetch(userId);
                 const channel = await this.#client.channels.fetch(channelId);
