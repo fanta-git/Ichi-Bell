@@ -51,7 +51,12 @@ class Pages {
     }
 
     private getMessage (): discord.InteractionReplyOptions {
-        let components: discord.MessageButton[];
+        const select = new discord.MessageSelectMenu({
+            custom_id: 's',
+            type: 'SELECT_MENU',
+            options: Array(10).fill(undefined).map((_, i) => ({ label: String(i), value: String(i), default: i === 3 }))
+        });
+        let components: discord.MessageActionRowComponent[];
 
         if (this.embeds.length === 0) {
             components = [];
@@ -65,7 +70,10 @@ class Pages {
 
         return {
             embeds: [this.embeds[this.currentPage]],
-            components: [new MessageActionRow({ components })]
+            components: [
+                new MessageActionRow({ components }),
+                new MessageActionRow({ components: [select] })
+            ]
         };
     }
 }

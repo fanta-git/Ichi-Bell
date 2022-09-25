@@ -17,7 +17,13 @@ const commandData: discord.ApplicationCommandDataResolvable[] = [
     },
     {
         name: 'list',
-        description: '登録されているリストの情報を表示します'
+        description: '登録されているリストの情報を表示します',
+        options: [{
+            type: 'NUMBER',
+            name: 'limit',
+            description: '1ページに表示する曲数',
+            min_value: 5
+        }]
     },
     {
         name: 'update',

@@ -120,23 +120,24 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         });
     },
     list: async (replyManager, interaction) => {
+        const limit = interaction.options.getNumber('limit') ?? 5;
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
         if (registeredList === undefined) throw Error('リストが登録されていません！`/register`コマンドを使ってリストを登録しましょう！');
 
         const videoIds = registeredList.songs.map(v => v.video_id).join(',');
         const details = await getAPI('/api/songs/by_video_ids', { video_ids: videoIds });
         const played = await getAPI('/api/cafe/played', { video_ids: videoIds });
-        const e: discord.MessageEmbedOptions[] = sliceByNumber(registeredList.songs, 10).map((v, i, { length }) => ({
+        const sliced: discord.MessageEmbedOptions[] = sliceByNumber(registeredList.songs, limit).map((v, i, { length }) => ({
             title: registeredList.list_title,
-            fields: [{
-                name: `${i + 1}/${length}`,
-                value: v.map(vv => (
-                    `__${details.find(vvv => vvv.video_id === vv.video_id)?.title ?? '???'}__\n└${played.find(vvv => vvv.video_id === vv.video_id)?.start_time ?? '選曲可能'}\n`
-                )).join('')
-            }]
+            url: `https://kiite.jp/playlist/${registeredList.list_id}`,
+            description: `${i + 1}/${length}`,
+            fields: v.map(vv => ({
+                name: details.find(vvv => vvv.video_id === vv.video_id)?.title ?? '楽曲情報の取得に失敗しました',
+                value: played.find(vvv => vvv.video_id === vv.video_id)?.start_time ?? '__選曲可能__'
+            }))
         }));
 
-        const p = new Pages(interaction, e);
+        const p = new Pages(interaction, sliced);
         p.send();
     },
     update: async (replyManager, interaction) => {
