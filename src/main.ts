@@ -5,6 +5,7 @@ import commandExecuter from './commandExecuter';
 import commandData from './commandData';
 import observeNextSong from './observeNextSong';
 import createServer from './createServer';
+import noticelistCheck from './noticelistCheck';
 
 const server = createServer();
 const client = new discord.Client({ intents: ['GUILDS'] });
@@ -27,5 +28,7 @@ client.once('ready', () => {
 
 client.on('interactionCreate', commandExecuter);
 
-if (process.env.TOKEN === undefined) throw Error('トークンが設定されていません！');
-client.login(process.env.TOKEN);
+noticelistCheck().then(() => {
+    if (process.env.TOKEN === undefined) throw Error('トークンが設定されていません！');
+    client.login(process.env.TOKEN);
+});
