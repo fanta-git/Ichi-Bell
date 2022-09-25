@@ -4,10 +4,9 @@ import { PlaylistContents } from './apiTypes';
 
 const registerNoticeList = async (userId: string, channelId: string, playlistData: PlaylistContents) => {
     for (const song of playlistData.songs) {
-        noticeList.get(song.video_id).then((item = []) => {
-            if (!item.includes(userId)) item.push(userId);
-            noticeList.set(song.video_id, item);
-        });
+        const item = await noticeList.get(song.video_id) ?? [];
+        if (!item.includes(userId)) item.push(userId);
+        await noticeList.set(song.video_id, item);
     }
 
     await userData.set(userId, {
@@ -33,16 +32,15 @@ const updateNoticeList = async (userId: string, channelId: string) => {
 const unregisterNoticeList = async (userId: string) => {
     const { registeredList } = await userData.get(userId) ?? {};
     if (registeredList === undefined) throw Error('リストが登録されていません！');
-    userData.delete(userId);
+    await userData.delete(userId);
     for (const songData of registeredList.songs) {
-        noticeList.get(songData.video_id).then((item = []) => {
-            const filted = item.filter(v => v !== userId);
-            if (filted.length) {
-                noticeList.set(songData.video_id, filted);
-            } else {
-                noticeList.delete(songData.video_id);
-            }
-        });
+        const item = await noticeList.get(songData.video_id) ?? [];
+        const filted = item.filter(v => v !== userId);
+        if (filted.length) {
+            await noticeList.set(songData.video_id, filted);
+        } else {
+            await noticeList.delete(songData.video_id);
+        }
     }
     return registeredList;
 };
