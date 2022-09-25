@@ -32,12 +32,15 @@ class songNoticer {
         utilData.set('lastSendSong', this.#songData);
 
         const userIds = await noticeList.get(this.#songData.video_id) ?? [];
+        const excludUserIds: string[] = [];
 
         for (const userId of userIds) {
             try {
                 const { channelId, registeredList } = await userData.get(userId) ?? {};
-                if (registeredList === undefined) continue;
-                if (registeredList.songs.every(v => v.video_id !== this.#songData.video_id)) continue;
+                if (!registeredList?.songs.some(v => v.video_id === this.#songData.video_id)) {
+                    excludUserIds.push(userId);
+                    continue;
+                }
                 if (channelId === undefined) continue;
                 const user = await this.#client.users.fetch(userId);
                 const channel = await this.#client.channels.fetch(channelId);
@@ -60,6 +63,11 @@ class songNoticer {
                     throw error;
                 }
             }
+        }
+
+        if (excludUserIds.length > 0) {
+            const excluded = userIds.filter(v => !excludUserIds.includes(v));
+            await noticeList.set(this.#songData.video_id, excluded);
         }
 
         for (const recipient of this.#recipients) {
