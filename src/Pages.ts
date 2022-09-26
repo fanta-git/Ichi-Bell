@@ -1,39 +1,23 @@
 import discord, { MessageActionRow } from 'discord.js';
 
 const CUSTOM_ID = {
-    BACK: 'back',
-    FORWARD: 'forward',
-    SELECT: 'select',
-    JUMP: 'jump'
+    HEAD: 'head',
+    TAIL: 'tail',
+    PREV: 'prev',
+    NEXT: 'next',
+    JUMP: 'jump',
+    SELECT: 'select'
 } as const;
 
 class Pages {
     interaction: discord.CommandInteraction;
     embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[];
     currentPage: number;
-    button: Record<'back' | 'jump' | 'forward', discord.MessageButton>;
 
     constructor (interaction: discord.CommandInteraction, embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[]) {
         this.interaction = interaction;
         this.embeds = embeds;
         this.currentPage = 0;
-        this.button = {
-            back: new discord.MessageButton({
-                customId: CUSTOM_ID.BACK,
-                style: 'SECONDARY',
-                emoji: '◀️'
-            }),
-            jump: new discord.MessageButton({
-                customId: CUSTOM_ID.JUMP,
-                style: 'SECONDARY',
-                emoji: '#️⃣'
-            }),
-            forward: new discord.MessageButton({
-                customId: CUSTOM_ID.FORWARD,
-                style: 'SECONDARY',
-                emoji: '▶️'
-            })
-        };
     }
 
     async send (): Promise<void> {
@@ -45,13 +29,21 @@ class Pages {
         });
 
         collector.on('collect', (inter) => {
-            let displayJump = false;
+            const displayJump = inter.customId === CUSTOM_ID.JUMP;
 
-            if (inter.customId === CUSTOM_ID.BACK && this.currentPage > 0) {
+            if (inter.customId === CUSTOM_ID.HEAD) {
+                this.currentPage = 0;
+            }
+
+            if (inter.customId === CUSTOM_ID.TAIL) {
+                this.currentPage = this.embeds.length - 1;
+            }
+
+            if (inter.customId === CUSTOM_ID.PREV) {
                 this.currentPage--;
             }
 
-            if (inter.customId === CUSTOM_ID.FORWARD && this.currentPage < this.embeds.length - 1) {
+            if (inter.customId === CUSTOM_ID.NEXT) {
                 this.currentPage++;
             }
 
@@ -59,16 +51,47 @@ class Pages {
                 this.currentPage = Number(inter.values[0]);
             }
 
-            if (inter.customId === CUSTOM_ID.JUMP) {
-                displayJump = true;
-            }
-
             inter.update(this.getMessage(displayJump));
         });
     }
 
     private getMessage (displayJump: boolean = false) {
-        const select = new discord.MessageSelectMenu({
+        const isHead = this.currentPage === 0;
+        const isTail = this.currentPage === this.embeds.length - 1;
+
+        const buttons = [
+            new discord.MessageButton({
+                customId: CUSTOM_ID.HEAD,
+                style: 'SECONDARY',
+                emoji: '⏪',
+                disabled: isHead
+            }),
+            new discord.MessageButton({
+                customId: CUSTOM_ID.PREV,
+                style: 'SECONDARY',
+                emoji: '◀️',
+                disabled: isHead
+            }),
+            new discord.MessageButton({
+                customId: CUSTOM_ID.JUMP,
+                style: 'SECONDARY',
+                emoji: '#️⃣'
+            }),
+            new discord.MessageButton({
+                customId: CUSTOM_ID.NEXT,
+                style: 'SECONDARY',
+                emoji: '▶️',
+                disabled: isTail
+            }),
+            new discord.MessageButton({
+                customId: CUSTOM_ID.TAIL,
+                style: 'SECONDARY',
+                emoji: '⏩',
+                disabled: isTail
+            })
+        ];
+
+        const jumpMenu = [new discord.MessageSelectMenu({
             custom_id: CUSTOM_ID.SELECT,
             type: 'SELECT_MENU',
             options: Array(this.embeds.length).fill(undefined).map((_, i) => ({
@@ -76,25 +99,14 @@ class Pages {
                 value: String(i),
                 default: i === this.currentPage
             }))
-        });
-        let turnPage: discord.MessageActionRowComponent[];
-
-        if (this.embeds.length === 0) {
-            turnPage = [];
-        } else if (this.currentPage === 0) {
-            turnPage = [Object.assign({}, this.button.back, { disabled: true }), this.button.forward];
-        } else if (this.currentPage === this.embeds.length - 1) {
-            turnPage = [this.button.back, Object.assign({}, this.button.forward, { disabled: true })];
-        } else {
-            turnPage = [this.button.back, this.button.jump, this.button.forward];
-        }
+        })];
 
         return {
             embeds: [this.embeds[this.currentPage]],
             components: [
-                displayJump
-                    ? new MessageActionRow({ components: [select] })
-                    : new MessageActionRow({ components: turnPage })
+                new MessageActionRow({
+                    components: displayJump ? jumpMenu : buttons
+                })
             ]
         };
     }
