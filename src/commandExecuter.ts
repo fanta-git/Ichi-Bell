@@ -121,6 +121,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
     },
     list: async (replyManager, interaction) => {
         const limit = interaction.options.getNumber('limit') ?? 5;
+        const sortType = interaction.options.getString('sort') ?? 'default';
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
         if (registeredList === undefined) throw Error('リストが登録されていません！`/register`コマンドを使ってリストを登録しましょう！');
 
@@ -135,26 +136,39 @@ const adaptCommands: Record<string, InteractionFuncs> = {
             footer: { text: `最終更新: ${registeredList.updated_at}` }
         };
 
-        const getLastPlayed = (videoId: string) => {
-            const played = playeds.find(v => v.video_id === videoId);
-            if (played === undefined) return '__選曲可能__';
-            const playedDate = new Date(played.start_time);
-            const durationMs = Date.now() - playedDate.getTime();
-            if (durationMs < 60e3) return `${durationMs / 1e3 | 0}秒前に選曲`;
-            if (durationMs < 60 * 60e3) return `${durationMs / (60e3) | 0}分前に選曲`;
-            if (durationMs < 24 * 60 * 60e3) return `${durationMs / (60 * 60e3) | 0}時間前に選曲`;
-            return `${durationMs / (24 * 60 * 60e3) | 0}日前に選曲`;
+        const getLastPlayed = (lastStartTime: string | undefined) => {
+            if (lastStartTime === undefined) return '__選曲可能です__';
+            const durationMs = Date.now() - Date.parse(lastStartTime);
+            if (durationMs < 60e3) return `${durationMs / 1e3 | 0}秒前に選曲されました`;
+            if (durationMs < 60 * 60e3) return `${durationMs / (60e3) | 0}分前に選曲されました`;
+            if (durationMs < 24 * 60 * 60e3) return `${durationMs / (60 * 60e3) | 0}時間前に選曲されました`;
+            return `${durationMs / (24 * 60 * 60e3) | 0}日前に選曲されました`;
         };
 
-        const playedLines = registeredList.songs.map((item, i) => {
-            const detail = details.find(v => item.video_id === v.video_id);
-            const title = `[${detail?.title}](https://www.nicovideo.jp/watch/${item.video_id})`;
-            const lastPlayed = getLastPlayed(item.video_id);
+        const displayDataList = registeredList.songs.map(item => ({
+            videoId: item.video_id,
+            title: details.find(v => v.video_id === item.video_id)?.title,
+            lastStartTime: playeds.find(v => v.video_id === item.video_id)?.start_time,
+            order: item.order_num
+        }));
+
+        if (sortType === 'remaining') {
+            displayDataList.sort((a, b) => {
+                if (a.lastStartTime === undefined && b.lastStartTime === undefined) return a.order - b.order;
+                if (a.lastStartTime === undefined) return -1;
+                if (b.lastStartTime === undefined) return 1;
+                return Date.parse(a.lastStartTime) - Date.parse(b.lastStartTime);
+            });
+        }
+
+        const playedLines = displayDataList.map((item, i) => {
+            const title = `[${item.title}](https://www.nicovideo.jp/watch/${item.videoId})`;
+            const lastPlayed = getLastPlayed(item.lastStartTime);
 
             return `${i + 1}.${title}\n└${lastPlayed}`;
         });
-        const sliced = sliceByNumber(playedLines, limit);
-        const songDataPages = sliced.map((v, i) => ({
+
+        const songDataPages = sliceByNumber(playedLines, limit).map((v, i) => ({
             title: `${registeredList.list_title}`,
             url: `https://kiite.jp/playlist/${registeredList.list_id}`,
             fields: [{
