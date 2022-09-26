@@ -3,14 +3,15 @@ import discord, { MessageActionRow } from 'discord.js';
 const CUSTOM_ID = {
     BACK: 'back',
     FORWARD: 'forward',
-    SELECT: 'select'
+    SELECT: 'select',
+    JUMP: 'jump'
 } as const;
 
 class Pages {
     interaction: discord.CommandInteraction;
     embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[];
     currentPage: number;
-    button: Record<'back' | 'forward', discord.MessageButton>;
+    button: Record<'back' | 'jump' | 'forward', discord.MessageButton>;
 
     constructor (interaction: discord.CommandInteraction, embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[]) {
         this.interaction = interaction;
@@ -22,10 +23,15 @@ class Pages {
                 style: 'SECONDARY',
                 emoji: '◀️'
             }),
+            jump: new discord.MessageButton({
+                customId: CUSTOM_ID.JUMP,
+                style: 'SECONDARY',
+                emoji: '#️⃣'
+            }),
             forward: new discord.MessageButton({
                 customId: CUSTOM_ID.FORWARD,
                 style: 'SECONDARY',
-                label: '▶️'
+                emoji: '▶️'
             })
         };
     }
@@ -39,6 +45,8 @@ class Pages {
         });
 
         collector.on('collect', (inter) => {
+            let displayJump = false;
+
             if (inter.customId === CUSTOM_ID.BACK && this.currentPage > 0) {
                 this.currentPage--;
             }
@@ -51,11 +59,15 @@ class Pages {
                 this.currentPage = Number(inter.values[0]);
             }
 
-            inter.update(this.getMessage());
+            if (inter.customId === CUSTOM_ID.JUMP) {
+                displayJump = true;
+            }
+
+            inter.update(this.getMessage(displayJump));
         });
     }
 
-    private getMessage () {
+    private getMessage (displayJump: boolean = false) {
         const select = new discord.MessageSelectMenu({
             custom_id: CUSTOM_ID.SELECT,
             type: 'SELECT_MENU',
@@ -74,14 +86,15 @@ class Pages {
         } else if (this.currentPage === this.embeds.length - 1) {
             turnPage = [this.button.back, Object.assign({}, this.button.forward, { disabled: true })];
         } else {
-            turnPage = [this.button.back, this.button.forward];
+            turnPage = [this.button.back, this.button.jump, this.button.forward];
         }
 
         return {
             embeds: [this.embeds[this.currentPage]],
             components: [
-                new MessageActionRow({ components: turnPage }),
-                new MessageActionRow({ components: [select] })
+                displayJump
+                    ? new MessageActionRow({ components: [select] })
+                    : new MessageActionRow({ components: turnPage })
             ]
         };
     }
