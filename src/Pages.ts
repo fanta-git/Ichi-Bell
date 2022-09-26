@@ -1,8 +1,6 @@
 import discord, { MessageActionRow } from 'discord.js';
 
 const CUSTOM_ID = {
-    HEAD: 'head',
-    TAIL: 'tail',
     PREV: 'prev',
     NEXT: 'next',
     JUMP: 'jump',
@@ -12,11 +10,13 @@ const CUSTOM_ID = {
 class Pages {
     interaction: discord.CommandInteraction;
     embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[];
+    ephemeral: boolean;
     currentPage: number;
 
-    constructor (interaction: discord.CommandInteraction, embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[]) {
+    constructor (interaction: discord.CommandInteraction, embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[], ephemeral: boolean = false) {
         this.interaction = interaction;
         this.embeds = embeds;
+        this.ephemeral = ephemeral;
         this.currentPage = 0;
     }
 
@@ -30,14 +30,6 @@ class Pages {
 
         collector.on('collect', (inter) => {
             const displayJump = inter.customId === CUSTOM_ID.JUMP;
-
-            if (inter.customId === CUSTOM_ID.HEAD) {
-                this.currentPage = 0;
-            }
-
-            if (inter.customId === CUSTOM_ID.TAIL) {
-                this.currentPage = this.embeds.length - 1;
-            }
 
             if (inter.customId === CUSTOM_ID.PREV) {
                 this.currentPage--;
@@ -61,12 +53,6 @@ class Pages {
 
         const buttons = [
             new discord.MessageButton({
-                customId: CUSTOM_ID.HEAD,
-                style: 'SECONDARY',
-                emoji: '⏪',
-                disabled: isHead
-            }),
-            new discord.MessageButton({
                 customId: CUSTOM_ID.PREV,
                 style: 'SECONDARY',
                 emoji: '◀️',
@@ -74,19 +60,13 @@ class Pages {
             }),
             new discord.MessageButton({
                 customId: CUSTOM_ID.JUMP,
-                style: 'SECONDARY',
-                emoji: '#️⃣'
+                style: 'PRIMARY',
+                label: `${this.currentPage + 1}/${this.embeds.length}`
             }),
             new discord.MessageButton({
                 customId: CUSTOM_ID.NEXT,
                 style: 'SECONDARY',
                 emoji: '▶️',
-                disabled: isTail
-            }),
-            new discord.MessageButton({
-                customId: CUSTOM_ID.TAIL,
-                style: 'SECONDARY',
-                emoji: '⏩',
                 disabled: isTail
             })
         ];
@@ -107,7 +87,8 @@ class Pages {
                 new MessageActionRow({
                     components: displayJump ? jumpMenu : buttons
                 })
-            ]
+            ],
+            ephemeral: this.ephemeral
         };
     }
 }

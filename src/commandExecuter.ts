@@ -126,7 +126,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
 
         const videoIds = registeredList.songs.map(v => v.video_id).join(',');
         const details = await getAPI('/api/songs/by_video_ids', { video_ids: videoIds });
-        const played = await getAPI('/api/cafe/played', { video_ids: videoIds });
+        const playeds = await getAPI('/api/cafe/played', { video_ids: videoIds });
 
         const playlistDataPage = {
             title: `${registeredList.list_title}`,
@@ -135,18 +135,35 @@ const adaptCommands: Record<string, InteractionFuncs> = {
             footer: { text: `最終更新: ${registeredList.updated_at}` }
         };
 
-        const sliced = sliceByNumber(registeredList.songs, limit);
-        const songDataPages = sliced.map((v, i, a) => ({
-            title: registeredList.list_title,
+        const getLastPlayed = (videoId: string) => {
+            const played = playeds.find(v => v.video_id === videoId);
+            if (played === undefined) return '__選曲可能__';
+            const playedDate = new Date(played.start_time);
+            const durationMs = Date.now() - playedDate.getTime();
+            if (durationMs < 60e3) return `${durationMs / 1e3 | 0}秒前に選曲`;
+            if (durationMs < 60 * 60e3) return `${durationMs / (60e3) | 0}分前に選曲`;
+            if (durationMs < 24 * 60 * 60e3) return `${durationMs / (60 * 60e3) | 0}時間前に選曲`;
+            return `${durationMs / (24 * 60 * 60e3) | 0}日前に選曲`;
+        };
+
+        const playedLines = registeredList.songs.map((item, i) => {
+            const detail = details.find(v => item.video_id === v.video_id);
+            const title = `[${detail?.title}](https://www.nicovideo.jp/watch/${item.video_id})`;
+            const lastPlayed = getLastPlayed(item.video_id);
+
+            return `${i + 1}.${title}\n└${lastPlayed}`;
+        });
+        const sliced = sliceByNumber(playedLines, limit);
+        const songDataPages = sliced.map((v, i) => ({
+            title: `${registeredList.list_title}`,
             url: `https://kiite.jp/playlist/${registeredList.list_id}`,
-            description: `${i + 1}/${a.length}`,
-            fields: v.map(vv => ({
-                name: details.find(vvv => vvv.video_id === vv.video_id)?.title ?? '楽曲情報の取得に失敗しました',
-                value: played.find(vvv => vvv.video_id === vv.video_id)?.start_time ?? '__選曲可能__'
-            }))
+            fields: [{
+                name: `全${registeredList.songs.length}曲`,
+                value: v.join('\n')
+            }]
         }));
 
-        const p = new Pages(interaction, [playlistDataPage, ...songDataPages]);
+        const p = new Pages(interaction, [playlistDataPage, ...songDataPages], true);
         p.send();
     },
     update: async (replyManager, interaction) => {
