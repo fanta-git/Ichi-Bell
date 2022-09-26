@@ -127,17 +127,26 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         const videoIds = registeredList.songs.map(v => v.video_id).join(',');
         const details = await getAPI('/api/songs/by_video_ids', { video_ids: videoIds });
         const played = await getAPI('/api/cafe/played', { video_ids: videoIds });
-        const sliced: discord.MessageEmbedOptions[] = sliceByNumber(registeredList.songs, limit).map((v, i, { length }) => ({
+
+        const playlistDataPage = {
+            title: `${registeredList.list_title}`,
+            url: `https://kiite.jp/playlist/${registeredList.list_id}`,
+            description: `**全${registeredList.songs.length}曲**\n${registeredList.description}`,
+            footer: { text: `最終更新: ${registeredList.updated_at}` }
+        };
+
+        const sliced = sliceByNumber(registeredList.songs, limit);
+        const songDataPages = sliced.map((v, i, a) => ({
             title: registeredList.list_title,
             url: `https://kiite.jp/playlist/${registeredList.list_id}`,
-            description: `${i + 1}/${length}`,
+            description: `${i + 1}/${a.length}`,
             fields: v.map(vv => ({
                 name: details.find(vvv => vvv.video_id === vv.video_id)?.title ?? '楽曲情報の取得に失敗しました',
                 value: played.find(vvv => vvv.video_id === vv.video_id)?.start_time ?? '__選曲可能__'
             }))
         }));
 
-        const p = new Pages(interaction, sliced);
+        const p = new Pages(interaction, [playlistDataPage, ...songDataPages]);
         p.send();
     },
     update: async (replyManager, interaction) => {
