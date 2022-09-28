@@ -25,7 +25,7 @@ class Pages {
 
         const reply = await this.interaction.fetchReply() as discord.Message;
         const collector = reply.createMessageComponentCollector({
-            filter: ({ user }) => user.id === this.interaction.user.id
+            filter: v => v.user.id === this.interaction.user.id
         });
 
         collector.on('collect', (inter) => {

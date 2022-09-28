@@ -120,7 +120,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         });
     },
     list: async (replyManager, interaction) => {
-        const limit = interaction.options.getNumber('limit') ?? 5;
+        const LIMIT = 10;
         const sortType = interaction.options.getString('sort') ?? 'default';
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
         if (registeredList === undefined) throw Error('リストが登録されていません！`/register`コマンドを使ってリストを登録しましょう！');
@@ -152,7 +152,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
             order: item.order_num
         }));
 
-        if (sortType === 'remaining') {
+        if (sortType === 'cooltime') {
             displayDataList.sort((a, b) => {
                 if (a.lastStartTime === b.lastStartTime === undefined) return a.order - b.order;
                 if (a.lastStartTime === undefined) return -1;
@@ -168,7 +168,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
             return `**${i + 1}**.${title}\n└${lastPlayed}`;
         });
 
-        const songDataPages = sliceByNumber(playedLines, limit).map((v, i) => ({
+        const songDataPages = sliceByNumber(playedLines, LIMIT).map((v, i) => ({
             title: `${registeredList.list_title}`,
             url: `https://kiite.jp/playlist/${registeredList.list_id}`,
             fields: [{
@@ -176,6 +176,17 @@ const adaptCommands: Record<string, InteractionFuncs> = {
                 value: v.join('\n')
             }]
         }));
+
+        if (songDataPages.some(v => v.fields[0].value.length > 1024)) {
+            interaction.reply({
+                embeds: [{
+                    title: 'Error',
+                    description: '文字数制限で表示できませんでした',
+                    color: '#ff0000'
+                }],
+                ephemeral: true
+            }).catch(e => console.error(e));
+        }
 
         const p = new BookMaker(interaction, [playlistDataPage, ...songDataPages], true);
         p.send();
