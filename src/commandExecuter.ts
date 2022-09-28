@@ -5,7 +5,7 @@ import InteractionReplyer from './ResponseInteraction';
 import { PlaylistContents } from './apiTypes';
 import * as noticeListManager from './noticeListManager';
 import { userData } from './database';
-import Pages from './Pages';
+import BookMaker from './BookMaker';
 
 type InteractionFuncs = {
     (interactionReplyer: InteractionReplyer, interaction: discord.CommandInteraction): Promise<void>
@@ -154,7 +154,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
 
         if (sortType === 'remaining') {
             displayDataList.sort((a, b) => {
-                if (a.lastStartTime === undefined && b.lastStartTime === undefined) return a.order - b.order;
+                if (a.lastStartTime === b.lastStartTime === undefined) return a.order - b.order;
                 if (a.lastStartTime === undefined) return -1;
                 if (b.lastStartTime === undefined) return 1;
                 return Date.parse(a.lastStartTime) - Date.parse(b.lastStartTime);
@@ -165,7 +165,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
             const title = `[${item.title}](https://www.nicovideo.jp/watch/${item.videoId})`;
             const lastPlayed = getLastPlayed(item.lastStartTime);
 
-            return `${i + 1}.${title}\n└${lastPlayed}`;
+            return `**${i + 1}**.${title}\n└${lastPlayed}`;
         });
 
         const songDataPages = sliceByNumber(playedLines, limit).map((v, i) => ({
@@ -177,7 +177,7 @@ const adaptCommands: Record<string, InteractionFuncs> = {
             }]
         }));
 
-        const p = new Pages(interaction, [playlistDataPage, ...songDataPages], true);
+        const p = new BookMaker(interaction, [playlistDataPage, ...songDataPages], true);
         p.send();
     },
     update: async (replyManager, interaction) => {
@@ -206,17 +206,6 @@ const adaptCommands: Record<string, InteractionFuncs> = {
         await replyManager.reply({
             content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
         });
-    },
-    test: async (replyManager, interaction) => {
-        const p = new Pages(interaction, [
-            { title: '0' },
-            { title: '1' },
-            { title: '2' },
-            { title: '3' },
-            { title: '4' },
-            { title: '5' }
-        ]);
-        p.send();
     }
 };
 
