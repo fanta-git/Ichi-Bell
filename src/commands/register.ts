@@ -1,19 +1,23 @@
-import { PlaylistContents } from '../apiTypes';
 import getKiiteAPI from '../getKiiteAPI';
-import SlashCommand from './commandUtil/SlashCommand';
+import SlashCommand from '../SlashCommand';
 import { registerNoticeList } from '../noticeListManager';
+import { formatListDataEmbed } from '../embedsUtil';
+
+const OPTIONS = {
+    URL: 'url'
+} as const;
 
 const register: SlashCommand = {
     name: 'register',
     description: '通知する曲のリストとしてKiiteのプレイリストを登録します',
     options: [{
         type: 'STRING',
-        name: 'url',
+        name: OPTIONS.URL,
         description: '追加するプレイリストのURL',
         required: true
     }],
     execute: async (client, interaction) => {
-        const url = interaction.options.getString('url') as string;
+        const url = interaction.options.getString(OPTIONS.URL) as string;
         const [listId] = url.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
         if (!listId) throw Error('URLが正しくありません！`https://kiite.jp/playlist/`で始まるURLを入力してください！');
         const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: listId });
@@ -23,17 +27,10 @@ const register: SlashCommand = {
 
         await interaction.reply({
             content: '以下のリストを通知リストとして登録しました！',
-            embeds: makePlaylistEmbeds(songListData),
+            embeds: [formatListDataEmbed(songListData)],
             ephemeral: true
         });
     }
 };
-
-const makePlaylistEmbeds = (playlist: PlaylistContents) => [{
-    title: `${playlist.list_title}`,
-    url: `https://kiite.jp/playlist/${playlist.list_id}`,
-    description: `**全${playlist.songs.length}曲**\n${playlist.description}`,
-    footer: { text: `最終更新: ${playlist.updated_at}` }
-}];
 
 export { register };

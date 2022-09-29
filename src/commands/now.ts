@@ -1,5 +1,5 @@
 import getAPI from '../getKiiteAPI';
-import SlashCommand from './commandUtil/SlashCommand';
+import SlashCommand from '../SlashCommand';
 
 const now: SlashCommand = {
     name: 'now',
@@ -22,7 +22,7 @@ const now: SlashCommand = {
                 color: nowSong.colors[0],
                 fields: [
                     {
-                        name: makeStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),
+                        name: formatStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),
                         value: `${msTommss(Date.now() - Date.parse(nowSong.start_time))} / ${msTommss(nowSong.msec_duration)}`,
                         inline: false
                     },
@@ -48,7 +48,7 @@ const now: SlashCommand = {
     }
 };
 
-const makeStatusbar = (nowVal: number, maxVal: number, barLength: number) => {
+const formatStatusbar = (nowVal: number, maxVal: number, barLength: number) => {
     const nowLength = nowVal * (barLength - 1) / maxVal | 0;
     const statusbarArr: string[] = new Array(barLength).fill('').map((_, i) => {
         if (i === 0) return (nowLength > 0) ? '┣' : '┠';

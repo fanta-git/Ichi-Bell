@@ -1,6 +1,6 @@
-import { PlaylistContents } from '../apiTypes';
+import { formatListDataEmbed } from '../embedsUtil';
 import { updateNoticeList } from '../noticeListManager';
-import SlashCommand from './commandUtil/SlashCommand';
+import SlashCommand from '../SlashCommand';
 
 const update: SlashCommand = {
     name: 'update',
@@ -10,16 +10,9 @@ const update: SlashCommand = {
 
         await interaction.reply({
             content: '以下のリストから通知リストを更新しました！',
-            embeds: makePlaylistEmbeds(songListData)
+            embeds: [formatListDataEmbed(songListData)]
         });
     }
 };
-
-const makePlaylistEmbeds = (playlist: PlaylistContents) => [{
-    title: `${playlist.list_title}`,
-    url: `https://kiite.jp/playlist/${playlist.list_id}`,
-    description: `**全${playlist.songs.length}曲**\n${playlist.description}`,
-    footer: { text: `最終更新: ${playlist.updated_at}` }
-}];
 
 export { update };

@@ -7,7 +7,7 @@ const CUSTOM_ID = {
     SELECT: 'select'
 } as const;
 
-class BookMarker {
+class BookMaker {
     interaction: discord.CommandInteraction;
     embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[];
     ephemeral: boolean;
@@ -93,4 +93,4 @@ class BookMarker {
     }
 }
 
-export default BookMarker;
+export default BookMaker;
