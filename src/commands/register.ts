@@ -2,6 +2,7 @@ import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
 import { registerNoticeList } from '../noticeListManager';
 import { formatListDataEmbed } from '../embedsUtil';
+import { ApplicationCommandOptionType } from 'discord.js';
 
 const OPTIONS = {
     URL: 'url'
@@ -11,7 +12,7 @@ const register: SlashCommand = {
     name: 'register',
     description: '通知する曲のリストとしてKiiteのプレイリストを登録します',
     options: [{
-        type: 'STRING',
+        type: ApplicationCommandOptionType.String,
         name: OPTIONS.URL,
         description: '追加するプレイリストのURL',
         required: true

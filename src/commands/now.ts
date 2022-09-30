@@ -19,7 +19,7 @@ const now: SlashCommand = {
                     url: 'https://kiite.jp/creator/' + artistData?.creator_id ?? ''
                 },
                 thumbnail: { url: nowSong.thumbnail },
-                color: nowSong.colors[0],
+                color: parseInt(nowSong.colors[0].slice(1), 16),
                 fields: [
                     {
                         name: formatStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),

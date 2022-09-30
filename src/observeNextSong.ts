@@ -16,7 +16,10 @@ const observeNextSong = async (client: discord.Client) => {
     while (true) {
         try {
             getKiiteAPI('/api/cafe/now_playing')
-                .then(ret => client.user?.setActivity({ name: ret.title, type: 'LISTENING' }));
+                .then(ret => client.user?.setActivity({
+                    name: ret.title,
+                    type: discord.ActivityType.Listening
+                }));
 
             const nextSong = await getNextSong();
             const nextSongStartTime = ISOtoMS(nextSong.start_time);

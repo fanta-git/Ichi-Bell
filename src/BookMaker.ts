@@ -1,4 +1,4 @@
-import discord, { MessageActionRow } from 'discord.js';
+import discord, { ButtonBuilder, SelectMenuBuilder } from 'discord.js';
 
 const CUSTOM_ID = {
     PREV: 'prev',
@@ -9,11 +9,11 @@ const CUSTOM_ID = {
 
 class BookMaker {
     interaction: discord.CommandInteraction;
-    embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[];
+    embeds: discord.APIEmbed[];
     ephemeral: boolean;
     currentPage: number;
 
-    constructor (interaction: discord.CommandInteraction, embeds: discord.MessageEmbed[] | discord.MessageEmbedOptions[], ephemeral: boolean = false) {
+    constructor (interaction: discord.CommandInteraction, embeds: discord.APIEmbed[], ephemeral: boolean = false) {
         this.interaction = interaction;
         this.embeds = embeds;
         this.ephemeral = ephemeral;
@@ -23,7 +23,7 @@ class BookMaker {
     async send (): Promise<void> {
         await this.interaction.reply(this.getMessage());
 
-        const reply = await this.interaction.fetchReply() as discord.Message;
+        const reply = await this.interaction.fetchReply();
         const collector = reply.createMessageComponentCollector({
             filter: v => v.user.id === this.interaction.user.id
         });
@@ -52,28 +52,28 @@ class BookMaker {
         const isTail = this.currentPage === this.embeds.length - 1;
 
         const buttons = [
-            new discord.MessageButton({
+            new discord.ButtonBuilder({
                 customId: CUSTOM_ID.PREV,
-                style: 'SECONDARY',
+                style: discord.ButtonStyle.Secondary,
                 emoji: '◀️',
                 disabled: isHead
             }),
-            new discord.MessageButton({
+            new discord.ButtonBuilder({
                 customId: CUSTOM_ID.JUMP,
-                style: 'PRIMARY',
+                style: discord.ButtonStyle.Primary,
                 label: `${this.currentPage + 1}/${this.embeds.length}`
             }),
-            new discord.MessageButton({
+            new discord.ButtonBuilder({
                 customId: CUSTOM_ID.NEXT,
-                style: 'SECONDARY',
+                style: discord.ButtonStyle.Secondary,
                 emoji: '▶️',
                 disabled: isTail
             })
         ];
 
-        const jumpMenu = [new discord.MessageSelectMenu({
+        const jumpMenu = [new discord.SelectMenuBuilder({
             custom_id: CUSTOM_ID.SELECT,
-            type: 'SELECT_MENU',
+            type: discord.ComponentType.SelectMenu,
             options: Array(this.embeds.length).fill(undefined).map((_, i) => ({
                 label: `${i + 1}ページ目`,
                 value: String(i),
@@ -84,7 +84,7 @@ class BookMaker {
         return {
             embeds: [this.embeds[this.currentPage]],
             components: [
-                new MessageActionRow({
+                new discord.ActionRowBuilder<ButtonBuilder | SelectMenuBuilder>({
                     components: displayJump ? jumpMenu : buttons
                 })
             ],

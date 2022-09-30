@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType, PermissionFlagsBits } from 'discord.js';
 import { userData } from '../database';
 import { unregisterNoticeList } from '../noticeListManager';
 import SlashCommand from '../SlashCommand';
@@ -10,7 +11,7 @@ const unregister: SlashCommand = {
     name: 'unregister',
     description: 'リストの登録を解除し、選曲通知を停止します',
     options: [{
-        type: 'USER',
+        type: ApplicationCommandOptionType.User,
         name: OPTIONS.TARGET,
         description: '登録を解除させたいユーザー（ユーザー指定にはチャンネルの管理権限が必要です）',
         required: false
@@ -21,7 +22,7 @@ const unregister: SlashCommand = {
         const { channelId } = await userData.get(interaction.user.id) ?? {};
         if (!isMyself && interaction.channelId !== channelId) throw Error('指定ユーザーのリスト登録解除は通知先として設定されているチャンネル内で行う必要があります！');
 
-        if (!isMyself && !interaction.memberPermissions?.has('MANAGE_CHANNELS')) {
+        if (!isMyself && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
             throw Error('指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
         }
 
