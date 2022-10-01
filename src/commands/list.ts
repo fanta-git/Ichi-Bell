@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import BookMaker from '../BookMaker';
 import { userData } from '../database';
-import { formatListDataEmbed, subdivision } from '../embedsUtil';
+import { formatLastPlayed, formatListDataEmbed, subdivision } from '../embedsUtil';
 import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
 
@@ -60,7 +60,7 @@ const list: SlashCommand = {
             const title = `[${item.title}](https://www.nicovideo.jp/watch/${item.videoId})`;
             const lastPlayed = formatLastPlayed(item.lastStartTime);
 
-            return `**${i + 1}.**${title}\n└${lastPlayed}`;
+            return `**${i + 1}.**${title}\n└${lastPlayed ? lastPlayed + 'に選曲されました' : '__選曲可能です__'}`;
         });
 
         const songDataPages = subdivision(playedLines, LIMIT).map(v => ({
@@ -76,15 +76,6 @@ const list: SlashCommand = {
         const book = new BookMaker(interaction, [playlistDataPage, ...songDataPages], true);
         await book.send();
     }
-};
-
-const formatLastPlayed = (lastStartTime: string | undefined) => {
-    if (lastStartTime === undefined) return '__選曲可能です__';
-    const durationMs = Date.now() - Date.parse(lastStartTime);
-    if (durationMs >= 24 * 60 * 60e3) return `${durationMs / (24 * 60 * 60e3) | 0}日前に選曲されました`;
-    if (durationMs >= 60 * 60e3) return `${durationMs / (60 * 60e3) | 0}時間前に選曲されました`;
-    if (durationMs >= 60e3) return `${durationMs / 60e3 | 0}分前に選曲されました`;
-    return `${durationMs / 1e3 | 0}秒前に選曲されました`;
 };
 
 export { list };
