@@ -7,13 +7,15 @@ const CUSTOM_ID = {
     SELECT: 'select'
 } as const;
 
+type embed = discord.JSONEncodable<discord.APIEmbed> | discord.APIEmbed;
+
 class BookMaker {
     interaction: discord.CommandInteraction;
-    embeds: discord.APIEmbed[];
+    embeds: embed[];
     ephemeral: boolean;
     currentPage: number;
 
-    constructor (interaction: discord.CommandInteraction, embeds: discord.APIEmbed[], ephemeral: boolean = false) {
+    constructor (interaction: discord.CommandInteraction, embeds: embed[], ephemeral: boolean = false) {
         this.interaction = interaction;
         this.embeds = embeds;
         this.ephemeral = ephemeral;
