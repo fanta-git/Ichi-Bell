@@ -41,7 +41,8 @@ client.on('interactionCreate', (interaction) => {
                         title: e.name,
                         description: e.message,
                         color: 0xff0000
-                    }]
+                    }],
+                    ephemeral: true
                 }).catch(e => console.error(e));
             } else {
                 console.error(e);
