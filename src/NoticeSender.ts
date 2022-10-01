@@ -5,12 +5,10 @@ import { noticeList, userData, utilData } from './database';
 import { unregisterNoticeList } from './noticeListManager';
 
 const NOTICE_MSG = 'リストの曲が流れるよ！';
-const ALLOW_CHANNEL_TYPE = ['DM', 'GUILD_TEXT'] as const;
 const ALLOW_ERROR = ['Missing Access', 'Unknown Channel'];
 
-type arrowChannels = Extract<discord.AnyChannel, { type: typeof ALLOW_CHANNEL_TYPE[number] }>;
 type recipientData = {
-    channel: arrowChannels,
+    channel: discord.TextBasedChannel,
     users: discord.User[],
     message?: Promise<discord.Message>
 };
@@ -48,7 +46,7 @@ class songNoticer {
                     unregisterNoticeList(userId);
                     continue;
                 }
-                if (isChannelAllowed(channel)) {
+                if (channel.type === discord.ChannelType.DM || channel.type === discord.ChannelType.GuildText) {
                     const recipient = this.#recipients.find(v => v.channel.id === channel.id);
                     if (recipient === undefined) {
                         this.#recipients.push({ users: [user], channel: channel });
@@ -72,7 +70,7 @@ class songNoticer {
 
         for (const recipient of this.#recipients) {
             try {
-                const mention = recipient.channel.type === 'DM' ? '' : recipient.users.map(v => `<@${v.id}>`).join('');
+                const mention = recipient.channel.isDMBased() ? '' : recipient.users.map(v => `<@${v.id}>`).join('');
                 const msg = recipient.channel.send(mention + NOTICE_MSG);
                 recipient.message = msg;
             } catch (error) {
@@ -94,7 +92,5 @@ class songNoticer {
         }
     }
 }
-
-const isChannelAllowed = (value: discord.AnyChannel): value is arrowChannels => ALLOW_CHANNEL_TYPE.some(v => value.type === v);
 
 export default songNoticer;

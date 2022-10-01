@@ -5,9 +5,10 @@ import * as commands from './commands';
 import observeNextSong from './observeNextSong';
 import createServer from './createServer';
 import noticelistCheck from './noticelistCheck';
+import { GatewayIntentBits } from 'discord.js';
 
 const server = createServer();
-const client = new discord.Client({ intents: ['GUILDS'] });
+const client = new discord.Client({ intents: [GatewayIntentBits.Guilds] });
 
 const commandsMap = new Map([...Object.entries(commands)]);
 dotenv.config();
@@ -28,7 +29,7 @@ client.once('ready', () => {
 });
 
 client.on('interactionCreate', (interaction) => {
-    if (!interaction.isCommand()) return;
+    if (!interaction.isChatInputCommand()) return;
     const calledCommand = commandsMap.get(interaction.commandName);
     if (calledCommand === undefined) return;
 
@@ -39,7 +40,7 @@ client.on('interactionCreate', (interaction) => {
                     embeds: [{
                         title: e.name,
                         description: e.message,
-                        color: '#ff0000'
+                        color: 0xff0000
                     }]
                 }).catch(e => console.error(e));
             } else {

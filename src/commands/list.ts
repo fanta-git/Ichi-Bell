@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js';
 import BookMaker from '../BookMaker';
 import { userData } from '../database';
 import { formatListDataEmbed } from '../embedsUtil';
@@ -19,7 +20,7 @@ const list: SlashCommand = {
     description: '登録されているリストの情報を表示します',
     options: [
         {
-            type: 'STRING',
+            type: ApplicationCommandOptionType.String,
             name: OPTIONS.SORT,
             description: '表示順',
             choices: [
