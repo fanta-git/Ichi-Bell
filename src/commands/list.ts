@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import BookMaker from '../BookMaker';
 import { userData } from '../database';
-import { formatListDataEmbed } from '../embedsUtil';
+import { formatListDataEmbed, subdivision } from '../embedsUtil';
 import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
 
@@ -79,13 +79,6 @@ const list: SlashCommand = {
         const book = new BookMaker(interaction, [playlistDataPage, ...songDataPages], true);
         await book.send();
     }
-};
-
-const subdivision = <T>(array: T[], number: number):T[][] => {
-    const length = Math.ceil(array.length / number);
-    return new Array(length).fill(undefined).map((_, i) =>
-        array.slice(i * number, (i + 1) * number)
-    );
 };
 
 const formatLastPlayed = (lastStartTime: string | undefined) => {
