@@ -13,7 +13,7 @@ const CHOICE = {
     DEFAULT: 'default',
     COOLTIME: 'cooltime'
 } as const;
-const EMBED_VALUE_LENGTH_MAX = 1024;
+const EMBED_DESCRIPTION_LIMIT = 4096;
 
 const list: SlashCommand = {
     name: 'list',
@@ -66,13 +66,10 @@ const list: SlashCommand = {
         const songDataPages = subdivision(playedLines, LIMIT).map(v => ({
             title: `${registeredList.list_title}`,
             url: `https://kiite.jp/playlist/${registeredList.list_id}`,
-            fields: [{
-                name: `全${registeredList.songs.length}曲`,
-                value: v.join('\n')
-            }]
+            description: `**全${registeredList.songs.length}曲**\n` + v.join('\n')
         }));
 
-        if (songDataPages.some(v => v.fields[0].value.length > EMBED_VALUE_LENGTH_MAX)) {
+        if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
             throw Error('文字数制限で表示できませんでした');
         }
 
