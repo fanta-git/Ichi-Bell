@@ -7,7 +7,8 @@ import SlashCommand from '../SlashCommand';
 
 const LIMIT = 10;
 const OPTIONS = {
-    SORT: 'sort'
+    SORT: 'sort',
+    LIMIT: 'limit'
 };
 const CHOICE = {
     DEFAULT: 'default',
@@ -27,10 +28,17 @@ const list: SlashCommand = {
                 { name: 'default', value: CHOICE.DEFAULT },
                 { name: 'cooltime', value: CHOICE.COOLTIME }
             ]
+        },
+        {
+            type: ApplicationCommandOptionType.Integer,
+            name: OPTIONS.LIMIT,
+            description: '1ページに表示する曲数',
+            maxValue: 25
         }
     ],
     execute: async (client, interaction) => {
         const sortType = interaction.options.getString(OPTIONS.SORT) ?? CHOICE.DEFAULT;
+        const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
         if (registeredList === undefined) throw Error('リストが登録されていません！`/register`コマンドを使ってリストを登録しましょう！');
 
@@ -63,14 +71,14 @@ const list: SlashCommand = {
             return `**${i + 1}.**${title}\n└${lastPlayed ? lastPlayed + 'に選曲されました' : '__選曲可能です__'}`;
         });
 
-        const songDataPages = subdivision(playedLines, LIMIT).map(v => ({
+        const songDataPages = subdivision(playedLines, limit).map(v => ({
             title: `${registeredList.list_title}`,
             url: `https://kiite.jp/playlist/${registeredList.list_id}`,
             description: `**全${registeredList.songs.length}曲**\n` + v.join('\n')
         }));
 
         if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
-            throw Error('文字数制限で表示できませんでした');
+            throw Error('文字数制限で表示できませんでした。limitオプションにもっと少ない数を指定してください。');
         }
 
         const book = new BookMaker(interaction, [playlistDataPage, ...songDataPages], true);

@@ -24,6 +24,7 @@ client.once('ready', () => {
     if (process.env.TEST_SERVER_ID === undefined) {
         client.application?.commands.set([...commandsMap.values()]);
     } else {
+        client.application?.commands.set([]);
         client.application?.commands.set([...commandsMap.values()], process.env.TEST_SERVER_ID);
     }
 });
