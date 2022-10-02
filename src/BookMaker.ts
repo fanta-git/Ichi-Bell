@@ -1,4 +1,4 @@
-import discord, { ButtonBuilder, SelectMenuBuilder } from 'discord.js';
+import discord from 'discord.js';
 
 const TIMEOUT = 60e3;
 
@@ -25,7 +25,12 @@ class BookMaker {
     }
 
     async send (): Promise<void> {
-        await this.interaction.reply(this.getMessage());
+        const sendMessage = this.getMessage();
+        if (this.interaction.deferred || this.interaction.replied) {
+            await this.interaction.editReply(sendMessage);
+        } else {
+            await this.interaction.reply(sendMessage);
+        }
 
         const reply = await this.interaction.fetchReply();
         const collector = reply.createMessageComponentCollector({
@@ -56,7 +61,6 @@ class BookMaker {
                 embeds: [
                     this.embeds[this.currentPage],
                     {
-                        title: 'タイムアウト',
                         description: 'このメッセージはタイムアウトしました。再度コマンドを送信してください。',
                         color: 0xff0000
                     }
@@ -104,7 +108,11 @@ class BookMaker {
 
         return {
             embeds: [this.embeds[this.currentPage]],
-            components: [new discord.ActionRowBuilder<ButtonBuilder | SelectMenuBuilder>({ components })],
+            components: [
+                new discord.ActionRowBuilder<discord.ButtonBuilder | discord.SelectMenuBuilder>({
+                    components
+                })
+            ],
             ephemeral: this.ephemeral
         };
     }

@@ -19,7 +19,8 @@ const observeNextSong = async (client: discord.Client) => {
                 .then(ret => client.user?.setActivity({
                     name: ret.title,
                     type: discord.ActivityType.Listening
-                }));
+                }))
+                .catch(e => console.error(e));
 
             const nextSong = await getNextSong();
             const nextSongStartTime = ISOtoMS(nextSong.start_time);

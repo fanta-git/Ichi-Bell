@@ -37,6 +37,8 @@ const list: SlashCommand = {
         }
     ],
     execute: async (client, interaction) => {
+        await interaction.deferReply({ ephemeral: true });
+
         const sortType = interaction.options.getString(OPTIONS.SORT) ?? CHOICE.DEFAULT;
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
@@ -81,7 +83,7 @@ const list: SlashCommand = {
             throw Error('文字数制限で表示できませんでした。limitオプションにもっと少ない数を指定してください。');
         }
 
-        const book = new BookMaker(interaction, [playlistDataPage, ...songDataPages], true);
+        const book = new BookMaker(interaction, [playlistDataPage, ...songDataPages]);
         await book.send();
     }
 };

@@ -19,6 +19,9 @@ const unregister: SlashCommand = {
     execute: async (client, interaction) => {
         const target = interaction.options.getUser(OPTIONS.TARGET) ?? interaction.user;
         const isMyself = target.id === interaction.user.id;
+
+        await interaction.deferReply({ ephemeral: isMyself });
+
         const { channelId } = await userData.get(interaction.user.id) ?? {};
         if (!isMyself && interaction.channelId !== channelId) throw Error('指定ユーザーのリスト登録解除は通知先として設定されているチャンネル内で行う必要があります！');
 
@@ -28,9 +31,8 @@ const unregister: SlashCommand = {
 
         await unregisterNoticeList(interaction.user.id);
 
-        await interaction.reply({
-            content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`,
-            ephemeral: isMyself
+        await interaction.editReply({
+            content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
         });
     }
 };

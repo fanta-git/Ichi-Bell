@@ -24,6 +24,8 @@ const timetable: SlashCommand = {
         }
     ],
     execute: async (client, interaction) => {
+        await interaction.deferReply({ ephemeral: true });
+
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
 
         const { registeredList } = await userData.get(interaction.user.id) ?? {};

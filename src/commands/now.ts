@@ -5,11 +5,13 @@ const now: SlashCommand = {
     name: 'now',
     description: 'Cafeで今流れている曲やCafeにいる人数などを表示します',
     execute: async (client, interaction) => {
+        await interaction.deferReply({ ephemeral: true });
+
         const userCount = await getAPI('/api/cafe/user_count');
         const nowSong = await getAPI('/api/cafe/now_playing');
         const rotateData = await getAPI('/api/cafe/rotate_users', { ids: nowSong.id.toString() });
         const artistData = await getAPI('/api/artist/id', { artist_id: nowSong.artist_id });
-        await interaction.reply({
+        await interaction.editReply({
             embeds: [{
                 title: nowSong.title,
                 url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
@@ -42,8 +44,7 @@ const now: SlashCommand = {
                         inline: true
                     }
                 ]
-            }],
-            ephemeral: true
+            }]
         });
     }
 };
