@@ -1,12 +1,16 @@
 import * as discord from 'discord.js';
 import dotenv from 'dotenv';
+import http from 'http';
 
 import * as commands from './commands';
 import observeNextSong from './observeNextSong';
-import createServer from './createServer';
 import noticelistCheck from './noticelistCheck';
 
-const server = createServer();
+const server = http.createServer((request, response) => {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end('Bot is online!');
+}).listen(3000);
+
 const client = new discord.Client({ intents: [discord.GatewayIntentBits.Guilds] });
 
 const commandsMap = new Map([...Object.entries(commands)]);
