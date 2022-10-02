@@ -1,8 +1,10 @@
-import fetch from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
 
 import { FuncAPI } from './apiTypes';
 
 const API_CALL_MAX_PER_SECOND = 4;
+const API_TIMEOUT = 15e3;
+const API_RETRY = 3;
 
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 
@@ -13,19 +15,38 @@ const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
     apiCallHist.push(nowTime + waitTime);
     if (waitTime > 0) await new Promise(resolve => setTimeout(resolve, waitTime));
     const formated = getDateString(new Date());
-    console.log(`[${formated}] ${url}`);
 
     const query = Array.from(Object.entries(queryParam), ([key, val]) => `${key}=${val}`).join(',');
-    const response = await fetch(`https://cafeapi.kiite.jp${url}?${query}`);
-
-    if (response.ok) {
+    try {
+        const response = await attemptFetch(
+            `https://cafeapi.kiite.jp${url}?${query}`,
+            { timeout: API_TIMEOUT, retry: API_RETRY }
+        );
+        console.log(`[${formated}] ${url}`);
         return await response.json() as any;
-    } else {
-        const message = `${response.status}: ${response.statusText}`;
-        console.error(message);
-        throw new Error(message);
+    } catch (e) {
+        if (e instanceof Error) {
+            throw new Error(`${e.name}: ${e.message}`);
+        }
     }
 };
+
+type AttemptFetch = (url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1] & { retry?: number }) => Promise<Response>;
+const attemptFetch: AttemptFetch = (url, init) =>
+    new Promise<Response>((resolve, reject) =>
+        fetch(url, init).then(response => {
+            if (response.ok) {
+                resolve(response);
+            } else {
+                if (init?.retry && init.retry > 0) {
+                    Object.assign(init, { retry: init.retry - 1 });
+                    resolve(attemptFetch(url, init));
+                } else {
+                    reject(Error(`${response.status} ${response.statusText}`));
+                }
+            }
+        })
+    );
 
 const getDateString = (date: Date) =>
     `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}.${date.getMilliseconds().toString().padStart(3, '0')}`;

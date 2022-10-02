@@ -5,10 +5,9 @@ import * as commands from './commands';
 import observeNextSong from './observeNextSong';
 import createServer from './createServer';
 import noticelistCheck from './noticelistCheck';
-import { GatewayIntentBits } from 'discord.js';
 
 const server = createServer();
-const client = new discord.Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new discord.Client({ intents: [discord.GatewayIntentBits.Guilds] });
 
 const commandsMap = new Map([...Object.entries(commands)]);
 dotenv.config();
@@ -24,6 +23,7 @@ client.once('ready', () => {
     if (process.env.TEST_SERVER_ID === undefined) {
         client.application?.commands.set([...commandsMap.values()]);
     } else {
+        client.application?.commands.set([]);
         client.application?.commands.set([...commandsMap.values()], process.env.TEST_SERVER_ID);
     }
 });
@@ -35,16 +35,21 @@ client.on('interactionCreate', (interaction) => {
 
     calledCommand.execute(client, interaction)
         .catch(e => {
+            console.error(e);
             if (e instanceof Error) {
-                interaction.reply({
+                const sendMessage = {
                     embeds: [{
                         title: e.name,
                         description: e.message,
                         color: 0xff0000
                     }]
-                }).catch(e => console.error(e));
-            } else {
-                console.error(e);
+                };
+
+                if (interaction.deferred || interaction.replied) {
+                    interaction.editReply(sendMessage).catch();
+                } else {
+                    interaction.reply(sendMessage).catch();
+                }
             }
         });
 });

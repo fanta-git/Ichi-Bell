@@ -18,6 +18,8 @@ const register: SlashCommand = {
         required: true
     }],
     execute: async (client, interaction) => {
+        await interaction.deferReply({ ephemeral: true });
+
         const url = interaction.options.getString(OPTIONS.URL) as string;
         const [listId] = url.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
         if (!listId) throw Error('URLが正しくありません！`https://kiite.jp/playlist/`で始まるURLを入力してください！');
@@ -26,10 +28,9 @@ const register: SlashCommand = {
 
         await registerNoticeList(interaction.user.id, interaction.channelId, songListData);
 
-        await interaction.reply({
+        await interaction.editReply({
             content: '以下のリストを通知リストとして登録しました！',
-            embeds: [formatListDataEmbed(songListData)],
-            ephemeral: true
+            embeds: [formatListDataEmbed(songListData)]
         });
     }
 };

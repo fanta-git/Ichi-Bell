@@ -1,19 +1,20 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import BookMaker from '../BookMaker';
 import { userData } from '../database';
-import { formatListDataEmbed } from '../embedsUtil';
+import { formatLastPlayed, formatListDataEmbed, subdivision } from '../embedsUtil';
 import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
 
 const LIMIT = 10;
 const OPTIONS = {
-    SORT: 'sort'
+    SORT: 'sort',
+    LIMIT: 'limit'
 };
 const CHOICE = {
     DEFAULT: 'default',
     COOLTIME: 'cooltime'
 } as const;
-const EMBED_VALUE_LENGTH_MAX = 1024;
+const EMBED_DESCRIPTION_LIMIT = 4096;
 
 const list: SlashCommand = {
     name: 'list',
@@ -27,10 +28,19 @@ const list: SlashCommand = {
                 { name: 'default', value: CHOICE.DEFAULT },
                 { name: 'cooltime', value: CHOICE.COOLTIME }
             ]
+        },
+        {
+            type: ApplicationCommandOptionType.Integer,
+            name: OPTIONS.LIMIT,
+            description: '1ページに表示する曲数',
+            maxValue: 25
         }
     ],
     execute: async (client, interaction) => {
+        await interaction.deferReply({ ephemeral: true });
+
         const sortType = interaction.options.getString(OPTIONS.SORT) ?? CHOICE.DEFAULT;
+        const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
         if (registeredList === undefined) throw Error('リストが登録されていません！`/register`コマンドを使ってリストを登録しましょう！');
 
@@ -60,41 +70,22 @@ const list: SlashCommand = {
             const title = `[${item.title}](https://www.nicovideo.jp/watch/${item.videoId})`;
             const lastPlayed = formatLastPlayed(item.lastStartTime);
 
-            return `**${i + 1}.**${title}\n└${lastPlayed}`;
+            return `**${i + 1}.**${title}\n└${lastPlayed ? lastPlayed + 'に選曲されました' : '__選曲可能です__'}`;
         });
 
-        const songDataPages = subdivision(playedLines, LIMIT).map(v => ({
+        const songDataPages = subdivision(playedLines, limit).map(v => ({
             title: `${registeredList.list_title}`,
             url: `https://kiite.jp/playlist/${registeredList.list_id}`,
-            fields: [{
-                name: `全${registeredList.songs.length}曲`,
-                value: v.join('\n')
-            }]
+            description: `**全${registeredList.songs.length}曲**\n` + v.join('\n')
         }));
 
-        if (songDataPages.some(v => v.fields[0].value.length > EMBED_VALUE_LENGTH_MAX)) {
-            throw Error('文字数制限で表示できませんでした');
+        if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
+            throw Error('文字数制限で表示できませんでした。limitオプションにもっと少ない数を指定してください。');
         }
 
-        const book = new BookMaker(interaction, [playlistDataPage, ...songDataPages], true);
+        const book = new BookMaker(interaction, [playlistDataPage, ...songDataPages]);
         await book.send();
     }
-};
-
-const subdivision = <T>(array: T[], number: number):T[][] => {
-    const length = Math.ceil(array.length / number);
-    return new Array(length).fill(undefined).map((_, i) =>
-        array.slice(i * number, (i + 1) * number)
-    );
-};
-
-const formatLastPlayed = (lastStartTime: string | undefined) => {
-    if (lastStartTime === undefined) return '__選曲可能です__';
-    const durationMs = Date.now() - Date.parse(lastStartTime);
-    if (durationMs >= 24 * 60 * 60e3) return `${durationMs / (24 * 60 * 60e3) | 0}日前に選曲されました`;
-    if (durationMs >= 60 * 60e3) return `${durationMs / (60 * 60e3) | 0}時間前に選曲されました`;
-    if (durationMs >= 60e3) return `${durationMs / 60e3 | 0}分前に選曲されました`;
-    return `${durationMs / 1e3 | 0}秒前に選曲されました`;
 };
 
 export { list };
