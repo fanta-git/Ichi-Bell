@@ -1,6 +1,5 @@
 import { ApplicationCommandOptionType, PermissionFlagsBits } from 'discord.js';
-import { userData } from '../database';
-import { unregisterNoticeList } from '../noticeListManager';
+import { userData, unregisterNoticeList } from '../database';
 import SlashCommand from '../SlashCommand';
 
 const OPTIONS = {

@@ -1,7 +1,6 @@
-import { userData } from '../database';
+import { userData, registerNoticeList } from '../database';
 import { formatListDataEmbed } from '../embedsUtil';
 import getKiiteAPI from '../getKiiteAPI';
-import { registerNoticeList } from '../noticeListManager';
 import SlashCommand from '../SlashCommand';
 
 const update: SlashCommand = {

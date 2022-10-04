@@ -4,7 +4,7 @@ import http from 'http';
 
 import * as commands from './commands';
 import observeNextSong from './observeNextSong';
-import noticelistCheck from './noticelistCheck';
+import { noticelistCheck } from './database';
 
 const server = http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': 'text/plain' });

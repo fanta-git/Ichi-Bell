@@ -1,6 +1,6 @@
 import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
-import { registerNoticeList } from '../noticeListManager';
+import { registerNoticeList } from '../database';
 import { formatListDataEmbed } from '../embedsUtil';
 import { ApplicationCommandOptionType } from 'discord.js';
 

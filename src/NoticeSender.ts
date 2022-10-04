@@ -1,8 +1,7 @@
 import * as discord from 'discord.js';
 
 import { ReturnCafeSong } from './apiTypes';
-import { noticeList, userData, utilData } from './database';
-import { unregisterNoticeList } from './noticeListManager';
+import { noticeList, userData, utilData, unregisterNoticeList } from './database';
 
 const NOTICE_MSG = 'リストの曲が流れるよ！';
 const ALLOW_ERROR = ['Missing Access', 'Unknown Channel'];
