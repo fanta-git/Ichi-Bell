@@ -24,8 +24,32 @@ const updateNoticeList = async (userId: string, channelId: string) => {
     const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
     if (songListData.status === 'failed') throw Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
     if (registedChannelId === channelId && songListData.updated_at === registeredList.updated_at) throw Error('プレイリストは最新の状態です！');
-    await unregisterNoticeList(userId);
-    await registerNoticeList(userId, channelId, songListData);
+
+    await userData.set(userId, {
+        userId,
+        channelId,
+        registeredList: songListData
+    });
+
+    const removeSongs = registeredList.songs.filter(v => !songListData.songs.includes(v));
+    const addSongs = songListData.songs.filter(v => !registeredList.songs.includes(v));
+
+    for (const song of removeSongs) {
+        const list = await noticeList.get(song.video_id) ?? [];
+        const newList = list.filter(v => v !== song.video_id);
+        if (newList.length === 0) {
+            await noticeList.delete(song.video_id);
+        } else {
+            await noticeList.set(song.video_id, newList);
+        }
+    }
+
+    for (const song of addSongs) {
+        const list = await noticeList.get(song.video_id) ?? [];
+        list.push(song.video_id);
+        await noticeList.set(song.video_id, list);
+    }
+
     return songListData;
 };
 
