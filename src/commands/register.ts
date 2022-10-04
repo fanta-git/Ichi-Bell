@@ -26,7 +26,11 @@ const register: SlashCommand = {
         const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: listId });
         if (songListData.status === 'failed') throw Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 
-        await registerNoticeList(interaction.user.id, interaction.channelId, songListData);
+        await registerNoticeList({
+            userId: interaction.user.id,
+            channelId: interaction.channelId,
+            registeredList: songListData
+        });
 
         await interaction.editReply({
             content: '以下のリストを通知リストとして登録しました！',
