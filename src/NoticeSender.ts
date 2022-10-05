@@ -8,7 +8,7 @@ const ALLOW_ERROR = ['Missing Access', 'Unknown Channel'];
 
 type recipientData = {
     channel: discord.TextBasedChannel,
-    users: discord.User[],
+    userIds: string[],
     message?: Promise<discord.Message>
 };
 
@@ -33,31 +33,27 @@ class NoticeSender {
 
         for (const userId of userIds) {
             try {
-                const { channelId, registeredList } = await userData.get(userId) ?? {};
-                if (!registeredList?.songs.some(v => v.video_id === this.#songData.video_id)) {
+                const data = await userData.get(userId);
+                if (data === undefined || !data.registeredList.songs.some(v => v.video_id === this.#songData.video_id)) {
                     excludUserIds.push(userId);
                     continue;
                 }
-                if (channelId === undefined) continue;
-                const user = await this.#client.users.fetch(userId);
-                const channel = await this.#client.channels.fetch(channelId);
-                if (channel === null) {
-                    unregisterData(userId);
-                    continue;
-                }
-                if (channel.type === discord.ChannelType.DM || channel.type === discord.ChannelType.GuildText) {
-                    const recipient = this.#recipients.find(v => v.channel.id === channel.id);
-                    if (recipient === undefined) {
-                        this.#recipients.push({ users: [user], channel: channel });
-                    } else {
-                        recipient.users.push(user);
+                const recipient = this.#recipients.find(v => v.channel.id === data.channelId);
+                if (recipient === undefined) {
+                    const channel = await this.#client.channels.fetch(data.channelId);
+                    if (channel === null || !channel.isTextBased()) {
+                        unregisterData(userId);
+                        continue;
                     }
+                    this.#recipients.push({ userIds: [userId], channel });
+                } else {
+                    recipient.userIds.push(userId);
                 }
             } catch (error) {
                 if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
                     unregisterData(userId);
                 } else {
-                    throw error;
+                    console.error(error);
                 }
             }
         }
@@ -69,14 +65,14 @@ class NoticeSender {
 
         for (const recipient of this.#recipients) {
             try {
-                const mention = recipient.channel.isDMBased() ? '' : recipient.users.map(v => `<@${v.id}>`).join('');
+                const mention = recipient.channel.isDMBased() ? '' : recipient.userIds.map(v => `<@${v}>`).join('');
                 const msg = recipient.channel.send(mention + NOTICE_MSG);
                 recipient.message = msg;
             } catch (error) {
                 if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
-                    for (const user of recipient.users) unregisterData(user.id);
+                    for (const userId of recipient.userIds) unregisterData(userId);
                 } else {
-                    throw error;
+                    console.error(error);
                 }
             }
         }

@@ -19,7 +19,7 @@ const server = http.createServer((request, response) => {
 
 client.once('ready', async () => {
     await listCheckPromise;
-    console.log(`${client.user?.tag} Ready!`);
+    console.log(`${client.user!.tag} Ready!`);
 
     observeNextSong(client).then(() => {
         server.close();
