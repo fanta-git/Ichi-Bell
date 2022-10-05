@@ -3,37 +3,26 @@ import * as discord from 'discord.js';
 import getKiiteAPI from './getKiiteAPI';
 import NoticeSender from './NoticeSender';
 
-const DURATION_MAX = 8 * 60e3;
-const RUN_LIMIT = Number(process.env.REBOOT_HOUR) * 3600e3 || Infinity;
-const REBOOT_NEED_SONGDURATION = 3 * 60e3;
 const NOTICE_AGO = 60e3;
 const GET_NEXTSONG_INTERVAL = 30e3;
 const API_UPDATE_WAIT = 3e3;
 const API_ERROR_WAIT = 10e3;
 
 const observeNextSong = async (client: discord.Client) => {
-    const launchedTime = Date.now();
     while (true) {
         try {
-            getKiiteAPI('/api/cafe/now_playing')
-                .then(ret => client.user?.setActivity({
-                    name: ret.title,
-                    type: discord.ActivityType.Listening
-                }))
-                .catch(e => console.error(e));
+            const nowSong = await getKiiteAPI('/api/cafe/now_playing');
+            client.user!.setActivity({
+                name: nowSong.title,
+                type: discord.ActivityType.Listening
+            });
 
             const nextSong = await getNextSong();
-            const nextSongStartTime = ISOtoMS(nextSong.start_time);
-            const nextSongEndTime = nextSongStartTime + Math.min(nextSong.msec_duration, DURATION_MAX);
             const noticeSender = new NoticeSender(client, nextSong);
             noticeSender.sendNotice();
 
-            await timer(nextSongStartTime - Date.now());
+            await timer(duration(nextSong.start_time));
             noticeSender.updateNotice();
-
-            const isLimitOver = Date.now() > launchedTime + RUN_LIMIT;
-            const haveAllowance = nextSongEndTime - Date.now() > REBOOT_NEED_SONGDURATION;
-            if (isLimitOver && haveAllowance) break;
 
             await timer(API_UPDATE_WAIT);
         } catch (e) {
@@ -46,7 +35,7 @@ const observeNextSong = async (client: discord.Client) => {
 const getNextSong = async () => {
     while (true) {
         const nextSong = await getKiiteAPI('/api/cafe/next_song');
-        const noticeRemaind = ISOtoMS(nextSong.start_time) - NOTICE_AGO - Date.now();
+        const noticeRemaind = duration(nextSong.start_time) - NOTICE_AGO;
         if (noticeRemaind < GET_NEXTSONG_INTERVAL) {
             await timer(noticeRemaind);
             return nextSong;
@@ -58,6 +47,6 @@ const getNextSong = async () => {
 const timer = (waitTimeMS: number) => new Promise(
     resolve => waitTimeMS > 0 ? setTimeout(() => resolve(true), waitTimeMS) : resolve(false)
 );
-const ISOtoMS = (iso: string) => new Date(iso).getTime();
+const duration = (iso: string) => Date.parse(iso) - Date.now();
 
 export default observeNextSong;

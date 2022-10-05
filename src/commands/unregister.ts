@@ -1,6 +1,5 @@
 import { ApplicationCommandOptionType, PermissionFlagsBits } from 'discord.js';
-import { userData } from '../database';
-import { unregisterNoticeList } from '../noticeListManager';
+import { userData, unregisterData } from '../database';
 import SlashCommand from '../SlashCommand';
 
 const OPTIONS = {
@@ -29,7 +28,7 @@ const unregister: SlashCommand = {
             throw Error('指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
         }
 
-        await unregisterNoticeList(interaction.user.id);
+        await unregisterData(interaction.user.id);
 
         await interaction.editReply({
             content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`

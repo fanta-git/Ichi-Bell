@@ -1,19 +1,25 @@
 import * as discord from 'discord.js';
 import dotenv from 'dotenv';
+import http from 'http';
 
 import * as commands from './commands';
 import observeNextSong from './observeNextSong';
-import createServer from './createServer';
-import noticelistCheck from './noticelistCheck';
+import { noticelistCheck } from './database';
 
-const server = createServer();
-const client = new discord.Client({ intents: [discord.GatewayIntentBits.Guilds] });
-
-const commandsMap = new Map([...Object.entries(commands)]);
 dotenv.config();
+if (process.env.TOKEN === undefined) throw Error('トークンが設定されていません！');
 
-client.once('ready', () => {
-    console.log(`${client.user?.tag} Ready!`);
+const client = new discord.Client({ intents: [discord.GatewayIntentBits.Guilds] });
+const commandsMap = new Map([...Object.entries(commands)]);
+const listCheckPromise = noticelistCheck();
+const server = http.createServer((request, response) => {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end('Bot is online!');
+}).listen(3000);
+
+client.once('ready', async () => {
+    await listCheckPromise;
+    console.log(`${client.user!.tag} Ready!`);
 
     observeNextSong(client).then(() => {
         server.close();
@@ -54,7 +60,4 @@ client.on('interactionCreate', (interaction) => {
         });
 });
 
-noticelistCheck().then(() => {
-    if (process.env.TOKEN === undefined) throw Error('トークンが設定されていません！');
-    client.login(process.env.TOKEN);
-});
+client.login(process.env.TOKEN);
