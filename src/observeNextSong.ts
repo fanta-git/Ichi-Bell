@@ -3,16 +3,12 @@ import * as discord from 'discord.js';
 import getKiiteAPI from './getKiiteAPI';
 import NoticeSender from './NoticeSender';
 
-const DURATION_MAX = 8 * 60e3;
-const RUN_LIMIT = Number(process.env.REBOOT_HOUR) * 3600e3 || Infinity;
-const REBOOT_NEED_SONGDURATION = 3 * 60e3;
 const NOTICE_AGO = 60e3;
 const GET_NEXTSONG_INTERVAL = 30e3;
 const API_UPDATE_WAIT = 3e3;
 const API_ERROR_WAIT = 10e3;
 
 const observeNextSong = async (client: discord.Client) => {
-    const launchedTime = Date.now();
     while (true) {
         try {
             getKiiteAPI('/api/cafe/now_playing')
@@ -23,17 +19,11 @@ const observeNextSong = async (client: discord.Client) => {
                 .catch(e => console.error(e));
 
             const nextSong = await getNextSong();
-            const nextSongStartTime = ISOtoMS(nextSong.start_time);
-            const nextSongEndTime = nextSongStartTime + Math.min(nextSong.msec_duration, DURATION_MAX);
             const noticeSender = new NoticeSender(client, nextSong);
             noticeSender.sendNotice();
 
-            await timer(nextSongStartTime - Date.now());
+            await timer(Date.parse(nextSong.start_time) - Date.now());
             noticeSender.updateNotice();
-
-            const isLimitOver = Date.now() > launchedTime + RUN_LIMIT;
-            const haveAllowance = nextSongEndTime - Date.now() > REBOOT_NEED_SONGDURATION;
-            if (isLimitOver && haveAllowance) break;
 
             await timer(API_UPDATE_WAIT);
         } catch (e) {
