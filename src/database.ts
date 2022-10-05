@@ -34,8 +34,8 @@ export const noticeList = new ExpKeyv<string[]>('sqlite://db.sqlite', { table: '
 export const userData = new ExpKeyv<userDataContents>('sqlite://db.sqlite', { table: 'userData' });
 export const utilData = new ExpKeyv<ReturnCafeSong>('sqlite://db.sqlite', { table: 'utilData' });
 
-export const registerNoticeList = async (data: userDataContents) => {
-    await unregisterNoticeList(data.userId);
+export const registerData = async (data: userDataContents) => {
+    await unregisterData(data.userId);
 
     for (const song of data.registeredList.songs) {
         await noticeList.update(song.video_id, (list = []) => {
@@ -50,7 +50,7 @@ export const registerNoticeList = async (data: userDataContents) => {
     return data;
 };
 
-export const unregisterNoticeList = async (userId: string) => {
+export const unregisterData = async (userId: string) => {
     const data = await userData.get(userId);
     if (data === undefined) throw Error('リストが登録されていません！');
     await userData.delete(userId);

@@ -1,6 +1,6 @@
 import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
-import { registerNoticeList } from '../database';
+import { registerData } from '../database';
 import { formatListDataEmbed } from '../embedsUtil';
 import { ApplicationCommandOptionType } from 'discord.js';
 
@@ -26,7 +26,7 @@ const register: SlashCommand = {
         const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: listId });
         if (songListData.status === 'failed') throw Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
 
-        await registerNoticeList({
+        await registerData({
             userId: interaction.user.id,
             channelId: interaction.channelId,
             registeredList: songListData

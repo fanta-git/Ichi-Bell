@@ -1,7 +1,7 @@
 import * as discord from 'discord.js';
 
 import { ReturnCafeSong } from './apiTypes';
-import { noticeList, userData, utilData, unregisterNoticeList } from './database';
+import { noticeList, userData, utilData, unregisterData } from './database';
 
 const NOTICE_MSG = 'リストの曲が流れるよ！';
 const ALLOW_ERROR = ['Missing Access', 'Unknown Channel'];
@@ -12,7 +12,7 @@ type recipientData = {
     message?: Promise<discord.Message>
 };
 
-class songNoticer {
+class NoticeSender {
     #client: discord.Client;
     #songData: ReturnCafeSong;
     #recipients: recipientData[];
@@ -42,7 +42,7 @@ class songNoticer {
                 const user = await this.#client.users.fetch(userId);
                 const channel = await this.#client.channels.fetch(channelId);
                 if (channel === null) {
-                    unregisterNoticeList(userId);
+                    unregisterData(userId);
                     continue;
                 }
                 if (channel.type === discord.ChannelType.DM || channel.type === discord.ChannelType.GuildText) {
@@ -55,7 +55,7 @@ class songNoticer {
                 }
             } catch (error) {
                 if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
-                    unregisterNoticeList(userId);
+                    unregisterData(userId);
                 } else {
                     throw error;
                 }
@@ -74,7 +74,7 @@ class songNoticer {
                 recipient.message = msg;
             } catch (error) {
                 if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
-                    for (const user of recipient.users) unregisterNoticeList(user.id);
+                    for (const user of recipient.users) unregisterData(user.id);
                 } else {
                     throw error;
                 }
@@ -92,4 +92,4 @@ class songNoticer {
     }
 }
 
-export default songNoticer;
+export default NoticeSender;

@@ -1,4 +1,4 @@
-import { userData, registerNoticeList } from '../database';
+import { userData, registerData } from '../database';
 import { formatListDataEmbed } from '../embedsUtil';
 import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
@@ -15,7 +15,7 @@ const update: SlashCommand = {
         if (songListData.status === 'failed') throw Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
         if (registedChannelId === interaction.channelId && songListData.updated_at === registeredList.updated_at) throw Error('プレイリストは最新の状態です！');
 
-        await registerNoticeList({
+        await registerData({
             userId: interaction.user.id,
             channelId: interaction.channelId,
             registeredList: songListData
