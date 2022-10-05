@@ -28,7 +28,8 @@ const unregister: SlashCommand = {
             throw Error('指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
         }
 
-        await unregisterData(interaction.user.id);
+        const unregistedList = await unregisterData(interaction.user.id);
+        if (unregistedList === undefined) throw Error('リストが登録されていません！');
 
         await interaction.editReply({
             content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`

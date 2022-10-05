@@ -52,7 +52,7 @@ export const registerData = async (data: userDataContents) => {
 
 export const unregisterData = async (userId: string) => {
     const data = await userData.get(userId);
-    if (data === undefined) throw Error('リストが登録されていません！');
+    if (data === undefined) return;
     await userData.delete(userId);
 
     for (const song of data.registeredList.songs) {
