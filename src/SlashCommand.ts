@@ -1,7 +1,7 @@
 import discord from 'discord.js';
 
 interface SlashCommand extends discord.ChatInputApplicationCommandData {
-    execute: (client: discord.Client, interaction: discord.ChatInputCommandInteraction<discord.CacheType>) => Promise<void>;
+    execute: (client: discord.Client, interaction: discord.ChatInputCommandInteraction<discord.CacheType>) => Promise<void | [string, string]>;
 };
 
 export default SlashCommand;

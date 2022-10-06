@@ -48,7 +48,7 @@ const timetable: SlashCommand = {
         }));
 
         if (pages.some(v => v.data.description!.length > EMBED_DESCRIPTION_LIMIT)) {
-            throw Error('文字数制限で表示できませんでした。limitオプションにもっと少ない数を指定してください。');
+            return ['文字数制限で表示できませんでした', 'limitオプションにもっと少ない数を指定してください。'];
         }
 
         const book = new BookMaker(interaction, pages, true);

@@ -40,6 +40,17 @@ client.on('interactionCreate', (interaction) => {
     if (calledCommand === undefined) return;
 
     calledCommand.execute(client, interaction)
+        .then(v => {
+            if (v === undefined) return;
+
+            interaction.editReply({
+                embeds: [{
+                    title: v[0],
+                    description: v[1],
+                    color: 0xffff00
+                }]
+            }).catch();
+        })
         .catch(e => {
             console.error(e);
             if (e instanceof Error) {
