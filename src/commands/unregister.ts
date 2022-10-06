@@ -22,14 +22,14 @@ const unregister: SlashCommand = {
         await interaction.deferReply({ ephemeral: isMyself });
 
         const { channelId } = await userData.get(interaction.user.id) ?? {};
-        if (!isMyself && interaction.channelId !== channelId) throw Error('指定ユーザーのリスト登録解除は通知先として設定されているチャンネル内で行う必要があります！');
+        if (!isMyself && interaction.channelId !== channelId) return ['チャンネルが間違っています', '指定ユーザーのリスト登録解除は通知先として設定されているチャンネル内で行う必要があります！'];
 
         if (!isMyself && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
-            throw Error('指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！');
+            return ['権限がありません', '指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！'];
         }
 
         const unregistedList = await unregisterData(interaction.user.id);
-        if (unregistedList === undefined) throw Error('リストが登録されていません！');
+        if (unregistedList === undefined) return ['リストが登録されていません', '`register`コマンドでリストを登録しましょう！'];
 
         await interaction.editReply({
             content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`

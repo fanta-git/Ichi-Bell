@@ -10,9 +10,9 @@ const update: SlashCommand = {
         await interaction.deferReply({ ephemeral: true });
 
         const { registeredList, channelId: registedChannelId } = await userData.get(interaction.user.id) ?? {};
-        if (registeredList === undefined) throw Error('リストが登録されていません！`/register`コマンドを使ってリストを登録しましょう！');
+        if (registeredList === undefined) return ['リストが登録されていません', '`/register`コマンドを使ってリストを登録しましょう！'];
         const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
-        if (songListData.status === 'failed') throw Error(`プレイリストの取得に失敗しました！登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。`);
+        if (songListData.status === 'failed') return ['プレイリストの取得に失敗しました', `登録されていたリスト（${registeredList.list_title}）は存在していますか？\n存在している場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください`];
         if (registedChannelId === interaction.channelId && songListData.updated_at === registeredList.updated_at) throw Error('プレイリストは最新の状態です！');
 
         await registerData({

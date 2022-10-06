@@ -22,9 +22,9 @@ const register: SlashCommand = {
 
         const url = interaction.options.getString(OPTIONS.URL) as string;
         const [listId] = url.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
-        if (!listId) throw Error('URLが正しくありません！`https://kiite.jp/playlist/`で始まるURLを入力してください！');
+        if (!listId) return ['URLが正しくありません', '`https://kiite.jp/playlist/`で始まるURLを入力してください！'];
         const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: listId });
-        if (songListData.status === 'failed') throw Error('プレイリストの取得に失敗しました！URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。');
+        if (songListData.status === 'failed') return ['プレイリストの取得に失敗しました', 'URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。'];
 
         await registerData({
             userId: interaction.user.id,
