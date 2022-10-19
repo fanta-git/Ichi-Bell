@@ -59,7 +59,7 @@ const list: SlashCommand = {
 
         if (sortType === CHOICE.COOLTIME) {
             displayDataList.sort((a, b) => {
-                if (a.lastStartTime === b.lastStartTime === undefined) return a.order - b.order;
+                if (a.lastStartTime === undefined && b.lastStartTime === undefined) return a.order - b.order;
                 if (a.lastStartTime === undefined) return -1;
                 if (b.lastStartTime === undefined) return 1;
                 return Date.parse(a.lastStartTime) - Date.parse(b.lastStartTime);
