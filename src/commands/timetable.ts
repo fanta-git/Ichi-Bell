@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js';
 import BookMaker from '../BookMaker';
 import { userData } from '../database';
-import { formatLastPlayed, subdivision } from '../embedsUtil';
+import { formatLastPlayed, sendWarning, subdivision } from '../embedsUtil';
 import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
 
@@ -47,9 +47,7 @@ const timetable: SlashCommand = {
             description: v.join('\n')
         }));
 
-        if (pages.some(v => v.data.description!.length > EMBED_DESCRIPTION_LIMIT)) {
-            return ['文字数制限で表示できませんでした', 'limitオプションにもっと少ない数を指定してください。'];
-        }
+        if (pages.some(v => v.data.description!.length > EMBED_DESCRIPTION_LIMIT)) return sendWarning(interaction, 'OVER_CHARLENGTH');
 
         const book = new BookMaker(interaction, pages, true);
         await book.send();

@@ -1,7 +1,7 @@
 import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
 import { registerData } from '../database';
-import { formatListDataEmbed } from '../embedsUtil';
+import { formatListDataEmbed, sendWarning } from '../embedsUtil';
 import { ApplicationCommandOptionType } from 'discord.js';
 
 const OPTIONS = {
@@ -22,9 +22,9 @@ const register: SlashCommand = {
 
         const url = interaction.options.getString(OPTIONS.URL) as string;
         const [listId] = url.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
-        if (!listId) return ['URLが正しくありません', '`https://kiite.jp/playlist/`で始まるURLを入力してください！'];
+        if (!listId) return sendWarning(interaction, 'INVALID_LISTURL');
         const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: listId });
-        if (songListData.status === 'failed') return ['プレイリストの取得に失敗しました', 'URLが間違っていませんか？\nURLが正しい場合、Kiiteが混み合っている可能性があるので時間を置いてもう一度試してみてください。'];
+        if (songListData.status === 'failed') return sendWarning(interaction, 'FAILD_FETCH_LIST_URL');
 
         await registerData({
             userId: interaction.user.id,

@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import BookMaker from '../BookMaker';
 import { userData } from '../database';
-import { formatLastPlayed, formatListDataEmbed, subdivision } from '../embedsUtil';
+import { formatLastPlayed, formatListDataEmbed, sendWarning, subdivision } from '../embedsUtil';
 import getKiiteAPI from '../getKiiteAPI';
 import SlashCommand from '../SlashCommand';
 
@@ -42,7 +42,7 @@ const list: SlashCommand = {
         const sortType = interaction.options.getString(OPTIONS.SORT) ?? CHOICE.DEFAULT;
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
-        if (registeredList === undefined) return ['リストが未登録です', '`/register`コマンドを使ってリストを登録しましょう！'];
+        if (registeredList === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
 
         const videoIds = registeredList.songs.map(v => v.video_id).join(',');
         const details = await getKiiteAPI('/api/songs/by_video_ids', { video_ids: videoIds });
@@ -80,7 +80,7 @@ const list: SlashCommand = {
         }));
 
         if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
-            return ['文字数制限で表示できませんでした', 'limitオプションにもっと少ない数を指定してください'];
+            return sendWarning(interaction, 'OVER_CHARLENGTH');
         }
 
         const book = new BookMaker(interaction, [playlistDataPage, ...songDataPages]);

@@ -1,5 +1,6 @@
 import { ApplicationCommandOptionType, PermissionFlagsBits } from 'discord.js';
 import { userData, unregisterData } from '../database';
+import { sendWarning } from '../embedsUtil';
 import SlashCommand from '../SlashCommand';
 
 const OPTIONS = {
@@ -22,11 +23,11 @@ const unregister: SlashCommand = {
         await interaction.deferReply({ ephemeral: isMyself });
 
         const data = await userData.get(target.id);
-        if (data === undefined) return ['リストが登録されていません', '`register`コマンドでリストを登録しましょう！'];
-        if (!isMyself && interaction.channelId !== data.channelId) return ['チャンネルが間違っています', '指定ユーザーのリスト登録解除は通知先として設定されているチャンネル内で行う必要があります！'];
+        if (data === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
+        if (!isMyself && interaction.channelId !== data.channelId) return sendWarning(interaction, 'INVAILD_CHANNEL');
 
         if (!isMyself && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
-            return ['権限がありません', '指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！'];
+            return sendWarning(interaction, 'PERMISSION_MISSING');
         }
 
         await unregisterData(target.id);
