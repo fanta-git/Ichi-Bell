@@ -24,7 +24,7 @@ export const formatLastPlayed = (lastStartTime: string | undefined) => {
     return `${durationMs / 1e3 | 0}秒前`;
 };
 
-const warnMessages = {
+const WARN_MESSAGES = {
     NOTEXIST_LIST: { title: 'リストが未登録です', description: '`/register`コマンドを使ってリストを登録しましょう！' },
     OVER_CHARLENGTH: { title: '文字数制限で表示できませんでした', description: 'limitオプションにもっと少ない数を指定してください！' },
     INVALID_LISTURL: { title: 'URLが正しくありません', description: '`https://kiite.jp/playlist/`で始まるURLを入力してください！' },
@@ -35,8 +35,8 @@ const warnMessages = {
     LIST_IS_LATEST: { title: 'プレイリストは最新の状態です！', description: '通知するチャンネルを変更するときは変更先のチャンネルでコマンドを実行してください！' }
 } as const;
 
-export const sendWarning = async (interaction: ChatInputCommandInteraction, name: keyof typeof warnMessages) => {
-    const msg = { embeds: [{ ...warnMessages[name], color: 0xffff00 }] };
+export const sendWarning = async (interaction: ChatInputCommandInteraction, name: keyof typeof WARN_MESSAGES) => {
+    const msg = { embeds: [{ ...WARN_MESSAGES[name], color: 0xffff00 }] };
     if (interaction.deferred || interaction.replied) {
         await interaction.editReply(msg);
     } else {
