@@ -1,5 +1,5 @@
 import { ApplicationCommandOptionType } from 'discord.js';
-import BookMaker from '../BookMaker';
+import sendNote from '../noteSend';
 import { userData } from '../database';
 import { formatLastPlayed, formatListDataEmbed, sendWarning, subdivision } from '../embedsUtil';
 import getKiiteAPI from '../getKiiteAPI';
@@ -83,8 +83,7 @@ const list: SlashCommand = {
             return sendWarning(interaction, 'OVER_CHARLENGTH');
         }
 
-        const book = new BookMaker(interaction, [playlistDataPage, ...songDataPages]);
-        await book.send();
+        await sendNote(interaction, [playlistDataPage, ...songDataPages]);
     }
 };
 

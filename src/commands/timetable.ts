@@ -1,5 +1,5 @@
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js';
-import BookMaker from '../BookMaker';
+import noteSend from '../noteSend';
 import { userData } from '../database';
 import { formatLastPlayed, sendWarning, subdivision } from '../embedsUtil';
 import getKiiteAPI from '../getKiiteAPI';
@@ -49,8 +49,7 @@ const timetable: SlashCommand = {
 
         if (pages.some(v => v.data.description!.length > EMBED_DESCRIPTION_LIMIT)) return sendWarning(interaction, 'OVER_CHARLENGTH');
 
-        const book = new BookMaker(interaction, pages, true);
-        await book.send();
+        await noteSend(interaction, pages);
     }
 };
 
