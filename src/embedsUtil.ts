@@ -24,6 +24,11 @@ export const formatLastPlayed = (lastStartTime: string | undefined) => {
     return `${durationMs / 1e3 | 0}秒前`;
 };
 
+export const timer = (waitTimeMS: number) => new Promise(
+    resolve => waitTimeMS > 0 ? setTimeout(() => resolve(true), waitTimeMS) : resolve(false)
+);
+export const timeDuration = (isoString: string) => Date.parse(isoString) - Date.now();
+
 const WARN_MESSAGES = {
     NOTEXIST_LIST: { title: 'リストが未登録です', description: '`/register`コマンドを使ってリストを登録しましょう！' },
     OVER_CHARLENGTH: { title: '文字数制限で表示できませんでした', description: 'limitオプションにもっと少ない数を指定してください！' },

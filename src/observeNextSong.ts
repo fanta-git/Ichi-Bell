@@ -2,6 +2,7 @@ import * as discord from 'discord.js';
 
 import { ReturnCafeSong } from './apiTypes';
 import * as db from './database';
+import { timeDuration, timer } from './embedsUtil';
 import getKiiteAPI from './getKiiteAPI';
 
 const NOTICE_AGO = 60e3;
@@ -113,10 +114,5 @@ const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
         msg.edit(msg.content.replace(NOTICE_MSG, `__${songData.title}__が流れたよ！`));
     }
 };
-
-const timer = (waitTimeMS: number) => new Promise(
-    resolve => waitTimeMS > 0 ? setTimeout(() => resolve(true), waitTimeMS) : resolve(false)
-);
-const timeDuration = (isoString: string) => Date.parse(isoString) - Date.now();
 
 export default observeNextSong;

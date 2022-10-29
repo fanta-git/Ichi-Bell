@@ -1,6 +1,7 @@
 import fetch, { Response } from 'node-fetch';
 
 import { FuncAPI } from './apiTypes';
+import { timer } from './embedsUtil';
 
 const API_CALL_MAX_PER_SECOND = 4;
 const API_TIMEOUT = 15e3;
@@ -13,7 +14,7 @@ const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
     const waitTime = Math.max(apiCallHist[0] + 1e3 - nowTime, 0);
     apiCallHist.shift();
     apiCallHist.push(nowTime + waitTime);
-    if (waitTime > 0) await new Promise(resolve => setTimeout(resolve, waitTime));
+    if (waitTime > 0) await timer(waitTime);
     const formated = getDateString(new Date());
 
     const query = Array.from(Object.entries(queryParam), ([key, val]) => `${key}=${val}`).join(',');
