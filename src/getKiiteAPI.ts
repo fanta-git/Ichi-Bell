@@ -6,6 +6,7 @@ import { timer } from './embedsUtil';
 const API_CALL_MAX_PER_SECOND = 4;
 const API_TIMEOUT = 15e3;
 const API_RETRY = 3;
+const API_ENDPOINT = process.env.API_ENDPOINT ?? 'https://cafe.kiite.jp';
 
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 
@@ -20,7 +21,7 @@ const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
     const query = Array.from(Object.entries(queryParam), ([key, val]) => `${key}=${val}`).join(',');
     try {
         const response = await attemptFetch(
-            `https://cafeapi.kiite.jp${url}?${query}`,
+            API_ENDPOINT + url + '?' + query,
             { timeout: API_TIMEOUT, retry: API_RETRY }
         );
         console.log(`[${formated}] ${url}`);
