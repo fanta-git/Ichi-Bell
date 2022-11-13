@@ -9,7 +9,7 @@ const now: SlashCommand = {
 
         const userCount = await getAPI('/api/cafe/user_count');
         const nowSong = await getAPI('/api/cafe/now_playing');
-        const rotateData = await getAPI('/api/cafe/rotate_users', { ids: nowSong.id.toString() });
+        const rotateData = await getAPI('/api/cafe/rotate_users', { ids: [nowSong.id] });
         const artistData = await getAPI('/api/artist/id', { artist_id: nowSong.artist_id });
         await interaction.editReply({
             embeds: [{

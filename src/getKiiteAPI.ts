@@ -10,7 +10,7 @@ const API_ENDPOINT = process.env.API_ENDPOINT ?? 'https://cafe.kiite.jp';
 
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 
-const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
+const getKiiteAPI: FuncAPI = async (path, queryParam = {}) => {
     const nowTime = Date.now();
     const waitTime = Math.max(apiCallHist[0] + 1e3 - nowTime, 0);
     apiCallHist.shift();
@@ -18,13 +18,13 @@ const getKiiteAPI: FuncAPI = async (url, queryParam = {}) => {
     if (waitTime > 0) await timer(waitTime);
     const formated = getDateString(new Date());
 
-    const query = Array.from(Object.entries(queryParam), ([key, val]) => `${key}=${val}`).join(',');
+    const query = new URLSearchParams(queryParam as any).toString();
     try {
         const response = await attemptFetch(
-            API_ENDPOINT + url + '?' + query,
+            API_ENDPOINT + path + '?' + query,
             { timeout: API_TIMEOUT, retry: API_RETRY }
         );
-        console.log(`[${formated}] ${url}`);
+        console.log(`[${formated}] ${path}`);
         return await response.json() as any;
     } catch (e) {
         if (e instanceof Error) {

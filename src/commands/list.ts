@@ -44,7 +44,7 @@ const list: SlashCommand = {
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
         if (registeredList === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
 
-        const videoIds = registeredList.songs.map(v => v.video_id).join(',');
+        const videoIds = registeredList.songs.map(v => v.video_id);
         const details = await getKiiteAPI('/api/songs/by_video_ids', { video_ids: videoIds });
         const playeds = await getKiiteAPI('/api/cafe/played', { video_ids: videoIds });
 
