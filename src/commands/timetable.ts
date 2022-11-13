@@ -2,7 +2,7 @@ import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js';
 import noteSend from '../noteSend';
 import { userData } from '../database';
 import { formatLastPlayed, sendWarning, subdivision } from '../embedsUtil';
-import getKiiteAPI from '../getKiiteAPI';
+import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from '../SlashCommand';
 
 const LIMIT = 10;
@@ -29,9 +29,9 @@ const timetable: SlashCommand = {
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
 
         const { registeredList } = await userData.get(interaction.user.id) ?? {};
-        const data = await getKiiteAPI('/api/cafe/timetable', { limit: 100 });
+        const data = await fetchCafeAPI('/api/cafe/timetable', { limit: 100 });
         const selectionIds = data.map(v => v.id);
-        const rotates = await getKiiteAPI('/api/cafe/rotate_users', { ids: selectionIds });
+        const rotates = await fetchCafeAPI('/api/cafe/rotate_users', { ids: selectionIds });
         const songLines = data.map((v, i) => {
             const played = i ? `[${formatLastPlayed(v.start_time)}]` : '**[ON AIR]**';
             const title = `[${v.title}](https://www.nicovideo.jp/watch/${v.video_id})`;

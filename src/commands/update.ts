@@ -1,6 +1,6 @@
 import { userData, registerData } from '../database';
 import { formatListDataEmbed, sendWarning } from '../embedsUtil';
-import getKiiteAPI from '../getKiiteAPI';
+import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from '../SlashCommand';
 
 const update: SlashCommand = {
@@ -11,7 +11,7 @@ const update: SlashCommand = {
 
         const { registeredList, channelId: registedChannelId } = await userData.get(interaction.user.id) ?? {};
         if (registeredList === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
-        const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
+        const songListData = await fetchCafeAPI('/api/playlists/contents/detail', { list_id: registeredList.list_id });
         if (songListData.status === 'failed') return sendWarning(interaction, 'FAILD_FETCH_LIST_REGISTED');
         if (registedChannelId === interaction.channelId && songListData.updated_at === registeredList.updated_at) throw Error('プレイリストは最新の状態です！');
 

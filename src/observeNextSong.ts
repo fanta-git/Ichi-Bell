@@ -3,7 +3,7 @@ import * as discord from 'discord.js';
 import { ReturnCafeSong } from './apiTypes';
 import * as db from './database';
 import { timeDuration, timer } from './embedsUtil';
-import getKiiteAPI from './getKiiteAPI';
+import fetchCafeAPI from './fetchCafeAPI';
 
 const NOTICE_AGO = 60e3;
 const GET_NEXTSONG_INTERVAL = 30e3;
@@ -21,7 +21,7 @@ type recipientData = {
 const observeNextSong = async (client: discord.Client) => {
     while (true) {
         try {
-            const nowSong = await getKiiteAPI('/api/cafe/now_playing');
+            const nowSong = await fetchCafeAPI('/api/cafe/now_playing');
             client.user!.setActivity({
                 name: nowSong.title,
                 type: discord.ActivityType.Listening
@@ -45,7 +45,7 @@ const observeNextSong = async (client: discord.Client) => {
 
 const waitRingAt = async () => {
     while (true) {
-        const nextSong = await getKiiteAPI('/api/cafe/next_song');
+        const nextSong = await fetchCafeAPI('/api/cafe/next_song');
         const noticeRemaind = timeDuration(nextSong.start_time) - NOTICE_AGO;
         if (noticeRemaind < GET_NEXTSONG_INTERVAL) {
             await timer(noticeRemaind);

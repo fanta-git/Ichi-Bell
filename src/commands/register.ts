@@ -1,4 +1,4 @@
-import getKiiteAPI from '../getKiiteAPI';
+import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from '../SlashCommand';
 import { registerData } from '../database';
 import { formatListDataEmbed, sendWarning } from '../embedsUtil';
@@ -23,7 +23,7 @@ const register: SlashCommand = {
         const url = interaction.options.getString(OPTIONS.URL) as string;
         const [listId] = url.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
         if (!listId) return sendWarning(interaction, 'INVALID_LISTURL');
-        const songListData = await getKiiteAPI('/api/playlists/contents/detail', { list_id: listId });
+        const songListData = await fetchCafeAPI('/api/playlists/contents/detail', { list_id: listId });
         if (songListData.status === 'failed') return sendWarning(interaction, 'FAILD_FETCH_LIST_URL');
 
         await registerData({

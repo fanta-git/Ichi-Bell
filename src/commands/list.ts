@@ -2,7 +2,7 @@ import { ApplicationCommandOptionType } from 'discord.js';
 import sendNote from '../noteSend';
 import { userData } from '../database';
 import { formatLastPlayed, formatListDataEmbed, sendWarning, subdivision } from '../embedsUtil';
-import getKiiteAPI from '../getKiiteAPI';
+import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from '../SlashCommand';
 
 const LIMIT = 10;
@@ -45,8 +45,8 @@ const list: SlashCommand = {
         if (registeredList === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
 
         const videoIds = registeredList.songs.map(v => v.video_id);
-        const details = await getKiiteAPI('/api/songs/by_video_ids', { video_ids: videoIds });
-        const playeds = await getKiiteAPI('/api/cafe/played', { video_ids: videoIds });
+        const details = await fetchCafeAPI('/api/songs/by_video_ids', { video_ids: videoIds });
+        const playeds = await fetchCafeAPI('/api/cafe/played', { video_ids: videoIds });
 
         const playlistDataPage = formatListDataEmbed(registeredList);
 

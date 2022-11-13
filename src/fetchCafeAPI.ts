@@ -4,13 +4,15 @@ import { FuncAPI } from './apiTypes';
 import { timer } from './embedsUtil';
 
 const API_CALL_MAX_PER_SECOND = 4;
-const API_TIMEOUT = 15e3;
-const API_RETRY = 3;
-const API_ENDPOINT = process.env.API_ENDPOINT ?? 'https://cafe.kiite.jp';
+const FETCH_INIT = {
+    timeout: 15e3,
+    retry: 3
+};
 
+const apiURL = new URL(process.env.API_ENDPOINT ?? 'https://cafe.kiite.jp');
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 
-const getKiiteAPI: FuncAPI = async (path, queryParam = {}) => {
+const getKiiteAPI: FuncAPI = async (pathname, queryParam = {}) => {
     const nowTime = Date.now();
     const waitTime = Math.max(apiCallHist[0] + 1e3 - nowTime, 0);
     apiCallHist.shift();
@@ -18,13 +20,11 @@ const getKiiteAPI: FuncAPI = async (path, queryParam = {}) => {
     if (waitTime > 0) await timer(waitTime);
     const formated = getDateString(new Date());
 
-    const query = new URLSearchParams(queryParam as any).toString();
+    const search = new URLSearchParams(queryParam as any).toString();
+    Object.assign(apiURL, { pathname, search });
     try {
-        const response = await attemptFetch(
-            API_ENDPOINT + path + '?' + query,
-            { timeout: API_TIMEOUT, retry: API_RETRY }
-        );
-        console.log(`[${formated}] ${path}`);
+        const response = await attemptFetch(apiURL, FETCH_INIT);
+        console.log(`[${formated}] ${pathname}`);
         return await response.json() as any;
     } catch (e) {
         if (e instanceof Error) {
