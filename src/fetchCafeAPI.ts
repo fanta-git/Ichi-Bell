@@ -12,7 +12,7 @@ const FETCH_INIT = {
 const apiURL = new URL(process.env.API_ENDPOINT ?? 'https://cafe.kiite.jp');
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 
-const getKiiteAPI: FuncAPI = async (pathname, queryParam = {}) => {
+const fetchCafeAPI: FuncAPI = async (pathname, queryParam = {}) => {
     const nowTime = Date.now();
     const waitTime = Math.max(apiCallHist[0] + 1e3 - nowTime, 0);
     apiCallHist.shift();
@@ -33,24 +33,18 @@ const getKiiteAPI: FuncAPI = async (pathname, queryParam = {}) => {
     }
 };
 
-type AttemptFetch = (url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1] & { retry?: number }) => Promise<Response>;
-const attemptFetch: AttemptFetch = (url, init) =>
+const attemptFetch = (url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1] & { retry?: number }): Promise<Response> =>
     new Promise<Response>((resolve, reject) =>
-        fetch(url, init).then(response => {
-            if (response.ok) {
-                resolve(response);
-            } else {
-                if (init?.retry && init.retry > 0) {
-                    Object.assign(init, { retry: init.retry - 1 });
-                    resolve(attemptFetch(url, init));
-                } else {
-                    reject(Error(`${response.status} ${response.statusText}`));
-                }
-            }
-        })
+        fetch(url, init).then(response =>
+            response.ok
+                ? resolve(response)
+                : init?.retry
+                    ? resolve(attemptFetch(url, { ...init, retry: init.retry - 1 }))
+                    : reject(Error(`${response.status} ${response.statusText}`))
+        )
     );
 
 const getDateString = (date: Date) =>
     `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}.${date.getMilliseconds().toString().padStart(3, '0')}`;
 
-export default getKiiteAPI;
+export default fetchCafeAPI;
