@@ -1,4 +1,4 @@
-import MapDB from './MapDB';
+import SqliteDB from './SqlitteDB';
 
-const db = new MapDB();
+const db = new SqliteDB();
 export default db;
