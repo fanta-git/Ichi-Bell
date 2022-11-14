@@ -1,7 +1,7 @@
 import * as discord from 'discord.js';
 
 import { ReturnCafeSong } from './apiTypes';
-import * as db from './database';
+import db from './database/db';
 import { timeDuration, timer } from './embedsUtil';
 import fetchCafeAPI from './fetchCafeAPI';
 
@@ -28,10 +28,10 @@ const observeNextSong = async (client: discord.Client) => {
             });
 
             const nextSong = await waitRingAt();
-            const lastSendSong = await db.utilData.get('lastSendSong');
+            const lastSendSong = await db.getLeatestRing();
             const isRinged = lastSendSong && lastSendSong.id === nextSong.id;
             if (!isRinged) {
-                db.utilData.set('lastSendSong', nextSong);
+                db.setLeatestRing(nextSong);
                 ringBell(client, nextSong);
             }
 
@@ -57,39 +57,28 @@ const waitRingAt = async () => {
 
 const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
     const recipients: recipientData[] = [];
-    const userIds = await db.noticeList.get(songData.video_id) ?? [];
-    const excludUserIds: string[] = [];
+    const users = await db.getTargetUsers(songData.video_id);
 
-    for (const userId of userIds) {
+    for (const user of users) {
         try {
-            const data = await db.userData.get(userId);
-            if (data === undefined || !data.registeredList.songs.some(v => v.video_id === songData.video_id)) {
-                excludUserIds.push(userId);
-                continue;
-            }
-            const recipient = recipients.find(v => v.channel.id === data.channelId);
+            const recipient = recipients.find(v => v.channel.id === user.channelId);
             if (recipient === undefined) {
-                const channel = await client.channels.fetch(data.channelId);
+                const channel = await client.channels.fetch(user.channelId);
                 if (channel === null || !channel.isTextBased()) {
-                    db.unregisterData(userId);
+                    db.deleateUser(user.userId);
                     continue;
                 }
-                recipients.push({ userIds: [userId], channel });
+                recipients.push({ userIds: [user.userId], channel });
             } else {
-                recipient.userIds.push(userId);
+                recipient.userIds.push(user.userId);
             }
         } catch (error) {
             if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
-                db.unregisterData(userId);
+                db.deleateUser(user.userId);
             } else {
                 console.error(error);
             }
         }
-    }
-
-    if (excludUserIds.length > 0) {
-        const excluded = userIds.filter(v => !excludUserIds.includes(v));
-        await db.noticeList.set(songData.video_id, excluded);
     }
 
     for (const recipient of recipients) {
@@ -99,7 +88,7 @@ const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
             recipient.message = msg;
         } catch (error) {
             if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
-                for (const userId of recipient.userIds) db.unregisterData(userId);
+                for (const userId of recipient.userIds) db.deleateUser(userId);
             } else {
                 console.error(error);
             }

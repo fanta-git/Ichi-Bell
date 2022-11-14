@@ -1,8 +1,8 @@
 import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from '../SlashCommand';
-import { registerData } from '../database';
 import { formatListDataEmbed, sendWarning } from '../embedsUtil';
 import { ApplicationCommandOptionType } from 'discord.js';
+import db from '../database/db';
 
 const OPTIONS = {
     URL: 'url'
@@ -26,10 +26,10 @@ const register: SlashCommand = {
         const songListData = await fetchCafeAPI('/api/playlists/contents/detail', { list_id: listId });
         if (songListData.status === 'failed') return sendWarning(interaction, 'FAILD_FETCH_LIST_URL');
 
-        await registerData({
+        await db.setUser({
             userId: interaction.user.id,
             channelId: interaction.channelId,
-            registeredList: songListData
+            playlist: songListData
         });
 
         await interaction.editReply({

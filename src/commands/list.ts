@@ -1,9 +1,9 @@
 import { ApplicationCommandOptionType } from 'discord.js';
 import sendNote from '../noteSend';
-import { userData } from '../database';
 import { formatLastPlayed, formatListDataEmbed, sendWarning, subdivision } from '../embedsUtil';
 import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from '../SlashCommand';
+import db from '../database/db';
 
 const LIMIT = 10;
 const OPTIONS = {
@@ -41,16 +41,16 @@ const list: SlashCommand = {
 
         const sortType = interaction.options.getString(OPTIONS.SORT) ?? CHOICE.DEFAULT;
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
-        const { registeredList } = await userData.get(interaction.user.id) ?? {};
-        if (registeredList === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
+        const { playlist } = await db.getUser(interaction.user.id) ?? {};
+        if (playlist === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
 
-        const videoIds = registeredList.songs.map(v => v.video_id);
+        const videoIds = playlist.songs.map(v => v.video_id);
         const details = await fetchCafeAPI('/api/songs/by_video_ids', { video_ids: videoIds });
         const playeds = await fetchCafeAPI('/api/cafe/played', { video_ids: videoIds });
 
-        const playlistDataPage = formatListDataEmbed(registeredList);
+        const playlistDataPage = formatListDataEmbed(playlist);
 
-        const displayDataList = registeredList.songs.map(item => ({
+        const displayDataList = playlist.songs.map(item => ({
             videoId: item.video_id,
             title: details.find(v => v.video_id === item.video_id)?.title,
             lastStartTime: playeds.find(v => v.video_id === item.video_id)?.start_time,
@@ -74,9 +74,9 @@ const list: SlashCommand = {
         });
 
         const songDataPages = subdivision(playedLines, limit).map(v => ({
-            title: `${registeredList.list_title}`,
-            url: `https://kiite.jp/playlist/${registeredList.list_id}`,
-            description: `**全${registeredList.songs.length}曲**\n` + v.join('\n')
+            title: `${playlist.list_title}`,
+            url: `https://kiite.jp/playlist/${playlist.list_id}`,
+            description: `**全${playlist.songs.length}曲**\n` + v.join('\n')
         }));
 
         if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
