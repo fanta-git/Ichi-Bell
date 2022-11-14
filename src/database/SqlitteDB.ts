@@ -53,6 +53,19 @@ class SqliteDB implements ListDatabase {
         this.#noticeList = new ExpKeyv<string[]>('sqlite://db.sqlite', { table: 'noticeList' });
         this.#users = new ExpKeyv<oldUser>('sqlite://db.sqlite', { table: 'userData' });
         this.#utilData = new ExpKeyv<ReturnCafeSong>('sqlite://db.sqlite', { table: 'utilData' });
+
+        this.#validateList();
+    }
+
+    async #validateList () {
+        for await (const [, user] of this.#users.iterator()) {
+            for (const song of user.registeredList.songs) {
+                const targets = await this.#noticeList.get(song.video_id) ?? [];
+                if (targets.includes(user.userId)) continue;
+                targets.push(user.userId);
+                await this.#noticeList.set(song.video_id, targets);
+            }
+        }
     }
 
     async setUser (data: user): Promise<boolean> {
@@ -93,9 +106,14 @@ class SqliteDB implements ListDatabase {
 
     async getTargetUsers (songId: string): Promise<user[]> {
         const targetIds = await this.#noticeList.get(songId) ?? [];
-        const users = targetIds.map(v => this.#users.get(v).then(userUpgrade) as Promise<user>);
+        const targetUsers: user[] = [];
 
-        return Promise.all(users);
+        for (const id of targetIds) {
+            const user = await this.#users.get(id);
+            if (user) targetUsers.push(userUpgrade(user)!);
+        };
+
+        return targetUsers;
     }
 
     setLeatestRing (song: ReturnCafeSong): boolean | Promise<boolean> {
