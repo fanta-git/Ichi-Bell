@@ -2,6 +2,7 @@ import * as discord from 'discord.js';
 
 import { ReturnCafeSong } from './apiTypes';
 import db from './database/db';
+import { user } from './database/ListDatabase';
 import { timeDuration, timer } from './embedsUtil';
 import fetchCafeAPI from './fetchCafeAPI';
 
@@ -11,12 +12,6 @@ const API_UPDATE_WAIT = 3e3;
 const API_ERROR_WAIT = 10e3;
 const NOTICE_MSG = 'リストの曲が流れるよ！';
 const ALLOW_ERROR = ['Missing Access', 'Unknown Channel'];
-
-type recipientData = {
-    channel: discord.TextBasedChannel,
-    userIds: string[],
-    message?: Promise<discord.Message>
-};
 
 const observeNextSong = async (client: discord.Client) => {
     while (true) {
@@ -56,39 +51,28 @@ const waitRingAt = async () => {
 };
 
 const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
-    const recipients: recipientData[] = [];
-    const users = await db.getTargetUsers(songData.video_id);
+    const recipients: Record<string, user[]> = {};
+    const sendedMessages: Promise<discord.Message>[] = [];
+    const targets = await db.getTargetUsers(songData.video_id);
 
-    for (const user of users) {
-        try {
-            const recipient = recipients.find(v => v.channel.id === user.channelId);
-            if (recipient === undefined) {
-                const channel = await client.channels.fetch(user.channelId);
-                if (channel === null || !channel.isTextBased()) {
-                    db.deleateUser(user.userId);
-                    continue;
-                }
-                recipients.push({ userIds: [user.userId], channel });
-            } else {
-                recipient.userIds.push(user.userId);
-            }
-        } catch (error) {
-            if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
-                db.deleateUser(user.userId);
-            } else {
-                console.error(error);
-            }
-        }
+    for (const user of targets) {
+        recipients[user.channelId] ??= [];
+        recipients[user.channelId].push(user);
     }
 
-    for (const recipient of recipients) {
+    for (const [channelId, recipient] of Object.entries(recipients)) {
         try {
-            const mention = recipient.channel.isDMBased() ? '' : recipient.userIds.map(v => `<@${v}>`).join('');
-            const msg = recipient.channel.send(mention + NOTICE_MSG);
-            recipient.message = msg;
+            const channel = await client.channels.fetch(channelId);
+            if (channel === null || !channel.isTextBased()) {
+                for (const target of recipient) db.deleateUser(target.userId);
+                continue;
+            }
+            const mention = channel.isDMBased() ? '' : recipient.map(v => `<@${v.userId}>`).join(' ');
+            const msg = channel.send(mention + NOTICE_MSG);
+            sendedMessages.push(msg);
         } catch (error) {
             if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
-                for (const userId of recipient.userIds) db.deleateUser(userId);
+                for (const { userId } of recipient) db.deleateUser(userId);
             } else {
                 console.error(error);
             }
@@ -97,9 +81,7 @@ const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
 
     await timer(timeDuration(songData.start_time));
 
-    for (const recipient of recipients) {
-        const msg = await recipient.message;
-        if (msg === undefined) continue;
+    for await (const msg of sendedMessages) {
         msg.edit(msg.content.replace(NOTICE_MSG, `__${songData.title}__が流れたよ！`));
     }
 };
