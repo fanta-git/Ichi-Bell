@@ -11,27 +11,6 @@ type oldUser = {
     registeredList: PlaylistContents
 }
 
-class ExpKeyv<Value = any, Options extends Record<string, any> = Record<string, unknown>> extends Keyv<Value, Options> {
-    iterator (namespace?: string | undefined): AsyncGenerator<[string, Value], void, any> {
-        return super.iterator(namespace);
-    }
-
-    update (key: string, updateFunc: (data: Value | undefined) => Value | undefined): Promise<Value | undefined>
-    update (key: string, updateFunc: (data: Value | undefined) => Promise<Value | undefined>): Promise<Value | undefined>
-
-    async update (key: string, updateFunc: any): Promise<any> {
-        const data = await this.get(key);
-        const newData = await updateFunc(data);
-        if (newData === undefined) {
-            await this.delete(key);
-            return undefined;
-        } else {
-            await this.set(key, newData);
-            return newData;
-        }
-    }
-}
-
 const userUpgrade = (user: oldUser | undefined): user | undefined => (user && {
     userId: user.userId,
     channelId: user.channelId,
@@ -45,71 +24,75 @@ const userDowngrade = (user: user | undefined): oldUser | undefined => (user && 
 });
 
 class SqliteDB implements ListDatabase {
-    #noticeList: ExpKeyv<string[]>
-    #users: ExpKeyv<oldUser>
-    #utilData: ExpKeyv<ReturnCafeSong>
+    #targets: Map<string, Set<string>>
+    #usersKeyv: Keyv<oldUser>
+    #utilDataKeyv: Keyv<ReturnCafeSong>
 
     constructor () {
-        this.#noticeList = new ExpKeyv<string[]>('sqlite://db.sqlite', { table: 'noticeList' });
-        this.#users = new ExpKeyv<oldUser>('sqlite://db.sqlite', { table: 'userData' });
-        this.#utilData = new ExpKeyv<ReturnCafeSong>('sqlite://db.sqlite', { table: 'utilData' });
+        this.#targets = new Map();
+        this.#usersKeyv = new Keyv<oldUser>('sqlite://db.sqlite', { table: 'userData' });
+        this.#utilDataKeyv = new Keyv<ReturnCafeSong>('sqlite://db.sqlite', { table: 'utilData' });
 
-        this.#validateList();
+        this.#listInit();
     }
 
-    async #validateList () {
-        for await (const [, user] of this.#users.iterator()) {
+    async #listInit () {
+        for await (const [, user] of this.#usersKeyv.iterator() as AsyncGenerator<[string, oldUser], void, any>) {
             for (const song of user.registeredList.songs) {
-                const targets = await this.#noticeList.get(song.video_id) ?? [];
-                if (targets.includes(user.userId)) continue;
-                targets.push(user.userId);
-                await this.#noticeList.set(song.video_id, targets);
+                this.#addTarget(song.video_id, user.userId);
             }
         }
     }
 
+    #addTarget (songId: string, userId: string) {
+        const targets = this.#targets.get(songId);
+        if (targets === undefined) {
+            this.#targets.set(songId, new Set([userId]));
+        } else {
+            targets.add(userId);
+        }
+    }
+
+    #removeTarget (songId: string, userId: string) {
+        const noticeList = this.#targets.get(songId);
+        if (noticeList === undefined) return;
+        noticeList.delete(userId);
+        if (noticeList.size === 0) this.#targets.delete(songId);
+    }
+
     async setUser (data: user): Promise<boolean> {
         await this.deleateUser(data.userId);
+        await this.#usersKeyv.set(data.userId, userDowngrade(data)!);
 
         for (const song of data.playlist.songs) {
-            await this.#noticeList.update(song.video_id, (list = []) => {
-                const index = list.findIndex(v => v === data.userId);
-                if (index === -1) list.push(data.userId);
-                return list.length ? list : undefined;
-            });
+            this.#addTarget(song.video_id, data.userId);
         }
-
-        await this.#users.set(data.userId, userDowngrade(data)!);
 
         return true;
     };
 
     async getUser (userId: string): Promise<user | undefined> {
-        return userUpgrade(await this.#users.get(userId));
+        return userUpgrade(await this.#usersKeyv.get(userId));
     }
 
     async deleateUser (userId: string): Promise<boolean> {
-        const data = userUpgrade(await this.#users.get(userId));
+        const data = userUpgrade(await this.#usersKeyv.get(userId));
         if (data === undefined) return false;
-        await this.#users.delete(userId);
+        await this.#usersKeyv.delete(userId);
 
         for (const song of data.playlist.songs) {
-            await this.#noticeList.update(song.video_id, (list = []) => {
-                const index = list.findIndex(v => v === userId);
-                if (index !== -1) list.splice(index, 1);
-                return list.length ? list : undefined;
-            });
+            this.#removeTarget(song.video_id, userId);
         }
 
         return true;
     }
 
     async getTargetUsers (songId: string): Promise<user[]> {
-        const targetIds = await this.#noticeList.get(songId) ?? [];
+        const targetIds = this.#targets.get(songId) ?? [];
         const targetUsers: user[] = [];
 
         for (const id of targetIds) {
-            const user = await this.#users.get(id);
+            const user = await this.#usersKeyv.get(id);
             if (user) targetUsers.push(userUpgrade(user)!);
         };
 
@@ -117,11 +100,11 @@ class SqliteDB implements ListDatabase {
     }
 
     setLeatestRing (song: ReturnCafeSong): boolean | Promise<boolean> {
-        return this.#utilData.set(LEATEST_RING, song);
+        return this.#utilDataKeyv.set(LEATEST_RING, song);
     }
 
     getLeatestRing (): ReturnCafeSong | Promise<ReturnCafeSong | undefined> | undefined {
-        return this.#utilData.get(LEATEST_RING);
+        return this.#utilDataKeyv.get(LEATEST_RING);
     }
 }
 
