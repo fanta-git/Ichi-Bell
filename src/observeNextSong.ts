@@ -22,9 +22,8 @@ const observeNextSong = async (client: discord.Client) => {
 
             const nextSong = await waitRingAt();
             const lastSendSong = await db.getLeatestRing();
-            const isRinged = lastSendSong && lastSendSong.id === nextSong.id;
-            if (!isRinged) {
-                db.setLeatestRing(nextSong);
+            if (lastSendSong !== nextSong.id) {
+                db.setLeatestRing(nextSong.id);
                 ringBell(client, nextSong);
             }
 
@@ -49,7 +48,7 @@ const waitRingAt = async () => {
 };
 
 const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
-    const sendedMessages: Promise<discord.Message>[] = [];
+    const sendedMessages: discord.Message[] = [];
     const targetsAll = await db.getTargetUsers(songData.video_id);
     const targetsEachChannel = devide(targetsAll, v => v.channelId);
 
@@ -61,7 +60,7 @@ const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
                 continue;
             }
             const mention = channel.isDMBased() ? '' : targetsSameChannel.map(v => `<@${v.userId}>`).join(' ');
-            const msg = channel.send(mention + NOTICE_MSG);
+            const msg = await channel.send(mention + NOTICE_MSG);
             sendedMessages.push(msg);
         } catch (error) {
             console.error(error);
@@ -70,7 +69,7 @@ const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
 
     await timer(timeDuration(songData.start_time));
 
-    for await (const msg of sendedMessages) {
+    for (const msg of sendedMessages) {
         msg.edit(msg.content.replace(NOTICE_MSG, `__${songData.title}__が流れたよ！`));
     }
 };

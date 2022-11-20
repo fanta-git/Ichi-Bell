@@ -1,7 +1,13 @@
-import { PlaylistContents, ReturnCafeSong } from '../apiTypes';
+export type playlist = {
+    listId: string,
+    title: string,
+    updatedAt: string,
+    description: string,
+    songIds: string[]
+};
 
 export type user = {
-    playlist: PlaylistContents,
+    playlist: playlist,
     userId: string,
     channelId: string
 };
@@ -9,13 +15,13 @@ export type user = {
 type awaitable<T> = T | Promise<T>;
 
 interface ListDatabase {
-    setUser (data: user): awaitable<boolean>
+    setUser (user: user): awaitable<boolean>
     getUser (userId: string): awaitable<user | undefined>
     deleateUser (userId: string): awaitable<boolean>
     getTargetUsers (songId: string): awaitable<user[]>
 
-    setLeatestRing (song: ReturnCafeSong): awaitable<boolean>
-    getLeatestRing (): awaitable<ReturnCafeSong | undefined>
+    setLeatestRing (selectionId: number): awaitable<boolean>
+    getLeatestRing (): awaitable<number | undefined>
 }
 
 export default ListDatabase;

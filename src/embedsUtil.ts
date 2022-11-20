@@ -1,11 +1,20 @@
 import { ChatInputCommandInteraction } from 'discord.js';
 import { PlaylistContents } from './apiTypes';
+import { playlist } from './database/ListDatabase';
 
-export const formatListDataEmbed = (list: PlaylistContents) => ({
-    title: `${list.list_title}`,
-    url: `https://kiite.jp/playlist/${list.list_id}`,
-    description: `**全${list.songs.length}曲**\n${list.description}`,
-    footer: { text: `最終更新: ${list.updated_at}` }
+export const formatPlaylist = (playlist: PlaylistContents): playlist => ({
+    listId: playlist.list_id,
+    title: playlist.list_title,
+    updatedAt: playlist.updated_at,
+    description: playlist.description,
+    songIds: playlist.songs.map(v => v.video_id)
+});
+
+export const formatListDataEmbed = (list: playlist) => ({
+    title: `${list.title}`,
+    url: `https://kiite.jp/playlist/${list.listId}`,
+    description: `**全${list.songIds.length}曲**\n${list.description}`,
+    footer: { text: `最終更新: ${list.updatedAt}` }
 });
 
 export const subdivision = <T>(array: T[], number: number):T[][] => {

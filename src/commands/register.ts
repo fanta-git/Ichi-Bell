@@ -1,6 +1,6 @@
 import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from '../SlashCommand';
-import { formatListDataEmbed, sendWarning } from '../embedsUtil';
+import { formatListDataEmbed, formatPlaylist, sendWarning } from '../embedsUtil';
 import { ApplicationCommandOptionType } from 'discord.js';
 import db from '../database/db';
 
@@ -26,15 +26,17 @@ const register: SlashCommand = {
         const songListData = await fetchCafeAPI('/api/playlists/contents/detail', { list_id: listId });
         if (songListData.status === 'failed') return sendWarning(interaction, 'FAILD_FETCH_LIST_URL');
 
+        const formated = formatPlaylist(songListData);
+
         await db.setUser({
             userId: interaction.user.id,
             channelId: interaction.channelId,
-            playlist: songListData
+            playlist: formated
         });
 
         await interaction.editReply({
             content: '以下のリストを通知リストとして登録しました！',
-            embeds: [formatListDataEmbed(songListData)]
+            embeds: [formatListDataEmbed(formated)]
         });
     }
 };

@@ -44,18 +44,21 @@ const list: SlashCommand = {
         const { playlist } = await db.getUser(interaction.user.id) ?? {};
         if (playlist === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
 
-        const videoIds = playlist.songs.map(v => v.video_id);
-        const details = await fetchCafeAPI('/api/songs/by_video_ids', { video_ids: videoIds });
-        const playeds = await fetchCafeAPI('/api/cafe/played', { video_ids: videoIds });
+        const details = await fetchCafeAPI('/api/songs/by_video_ids', { video_ids: playlist.songIds });
+        const playeds = await fetchCafeAPI('/api/cafe/played', { video_ids: playlist.songIds });
 
         const playlistDataPage = formatListDataEmbed(playlist);
 
-        const displayDataList = playlist.songs.map(item => ({
+        const displayDataList = details.map((item, key) => ({
             videoId: item.video_id,
             title: details.find(v => v.video_id === item.video_id)?.title,
             lastStartTime: playeds.find(v => v.video_id === item.video_id)?.start_time,
-            order: item.order_num
+            order: playlist.songIds.indexOf(item.video_id)
         }));
+
+        if (sortType === CHOICE.DEFAULT) {
+            displayDataList.sort((a, b) => a.order - b.order);
+        }
 
         if (sortType === CHOICE.COOLTIME) {
             displayDataList.sort((a, b) => {
@@ -74,9 +77,9 @@ const list: SlashCommand = {
         });
 
         const songDataPages = subdivision(playedLines, limit).map(v => ({
-            title: `${playlist.list_title}`,
-            url: `https://kiite.jp/playlist/${playlist.list_id}`,
-            description: `**全${playlist.songs.length}曲**\n` + v.join('\n')
+            title: `${playlist.title}`,
+            url: `https://kiite.jp/playlist/${playlist.listId}`,
+            description: `**全${playlist.songIds.length}曲**\n` + v.join('\n')
         }));
 
         if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
