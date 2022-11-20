@@ -15,7 +15,7 @@ const ALLOW_ERROR = ['Missing Access', 'Unknown Channel'];
 type recipientData = {
     channel: discord.TextBasedChannel,
     userIds: string[],
-    message?: Promise<discord.Message>
+    message?: discord.Message
 };
 
 const observeNextSong = async (client: discord.Client) => {
@@ -95,7 +95,7 @@ const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
     for (const recipient of recipients) {
         try {
             const mention = recipient.channel.isDMBased() ? '' : recipient.userIds.map(v => `<@${v}>`).join('');
-            const msg = recipient.channel.send(mention + NOTICE_MSG);
+            const msg = await recipient.channel.send(mention + NOTICE_MSG);
             recipient.message = msg;
         } catch (error) {
             if (error instanceof Error && ALLOW_ERROR.includes(error.message)) {
@@ -109,7 +109,7 @@ const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
     await timer(timeDuration(songData.start_time));
 
     for (const recipient of recipients) {
-        const msg = await recipient.message;
+        const msg = recipient.message;
         if (msg === undefined) continue;
         msg.edit(msg.content.replace(NOTICE_MSG, `__${songData.title}__が流れたよ！`));
     }
