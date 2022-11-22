@@ -1,9 +1,9 @@
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js';
 import noteSend from '../noteSend';
-import { userData } from '../database';
 import { formatLastPlayed, sendWarning, subdivision } from '../embedsUtil';
 import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from '../SlashCommand';
+import db from '../database/db';
 
 const LIMIT = 10;
 const OPTIONS = {
@@ -28,14 +28,14 @@ const timetable: SlashCommand = {
 
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
 
-        const { registeredList } = await userData.get(interaction.user.id) ?? {};
+        const { playlist } = await db.getUser(interaction.user.id) ?? {};
         const data = await fetchCafeAPI('/api/cafe/timetable', { limit: 100 });
         const selectionIds = data.map(v => v.id);
         const rotates = await fetchCafeAPI('/api/cafe/rotate_users', { ids: selectionIds });
         const songLines = data.map((v, i) => {
             const played = i ? `[${formatLastPlayed(v.start_time)}]` : '**[ON AIR]**';
             const title = `[${v.title}](https://www.nicovideo.jp/watch/${v.video_id})`;
-            const registedUnder = registeredList?.songs.some(item => item.video_id === v.video_id) ? '__' : '';
+            const registedUnder = playlist?.songIds.includes(v.video_id) ? '__' : '';
             const newFav = `:heartpulse:${v.new_fav_user_ids?.length ?? 0}`;
             const rotate = `:arrows_counterclockwise:${rotates[v.id]?.length ?? 0}`;
 

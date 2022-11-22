@@ -1,5 +1,5 @@
 import { ApplicationCommandOptionType, PermissionFlagsBits } from 'discord.js';
-import { userData, unregisterData } from '../database';
+import db from '../database/db';
 import { sendWarning } from '../embedsUtil';
 import SlashCommand from '../SlashCommand';
 
@@ -22,7 +22,7 @@ const unregister: SlashCommand = {
 
         await interaction.deferReply({ ephemeral: isMyself });
 
-        const data = await userData.get(target.id);
+        const data = await db.getUser(target.id);
         if (data === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
         if (!isMyself && interaction.channelId !== data.channelId) return sendWarning(interaction, 'INVAILD_CHANNEL');
 
@@ -30,7 +30,7 @@ const unregister: SlashCommand = {
             return sendWarning(interaction, 'PERMISSION_MISSING');
         }
 
-        await unregisterData(target.id);
+        await db.deleateUser(target.id);
 
         await interaction.editReply({
             content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
