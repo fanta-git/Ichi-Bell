@@ -1,13 +1,14 @@
 import Keyv from 'keyv';
+import { ReturnCafeSong } from '../apiTypes';
 import ListDatabase, { user } from './ListDatabase';
 
-const LEATEST_RING = 'leatestRing';
+const RINGED = 'ringed';
 const SQLITE = 'sqlite://db.sqlite';
 
 class SqliteDB implements ListDatabase {
     #targets: Keyv<string[]>
     #usersKeyv: Keyv<user>
-    #utilDataKeyv: Keyv<{ id: number }>
+    #utilDataKeyv: Keyv<ReturnCafeSong>
 
     constructor () {
         this.#targets = new Keyv(SQLITE, { table: 'noticeList' });
@@ -54,7 +55,7 @@ class SqliteDB implements ListDatabase {
         await this.#usersKeyv.set(data.userId, data);
 
         for (const songId of data.playlist.songIds) {
-            this.#addTarget(songId, data.userId);
+            await this.#addTarget(songId, data.userId);
         }
 
         return true;
@@ -88,12 +89,12 @@ class SqliteDB implements ListDatabase {
         return targetUsers;
     }
 
-    setLeatestRing (selectionId: number): boolean | Promise<boolean> {
-        return this.#utilDataKeyv.set(LEATEST_RING, { id: selectionId });
+    setRinged (ringed: ReturnCafeSong): boolean | Promise<boolean> {
+        return this.#utilDataKeyv.set(RINGED, ringed);
     }
 
-    async getLeatestRing (): Promise<number | undefined> {
-        return (await this.#utilDataKeyv.get(LEATEST_RING))?.id;
+    getRinged (): Promise<ReturnCafeSong | undefined> {
+        return this.#utilDataKeyv.get(RINGED);
     }
 }
 

@@ -21,9 +21,9 @@ const observeNextSong = async (client: discord.Client) => {
             });
 
             const nextSong = await waitRingAt();
-            const lastSendSong = await db.getLeatestRing();
-            if (lastSendSong !== nextSong.id) {
-                db.setLeatestRing(nextSong.id);
+            const lastSendSong = await db.getRinged();
+            if (lastSendSong && lastSendSong.id !== nextSong.id) {
+                db.setRinged(nextSong);
                 ringBell(client, nextSong);
             }
 
