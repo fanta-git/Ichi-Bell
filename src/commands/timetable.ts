@@ -47,7 +47,7 @@ const timetable: SlashCommand = {
             description: v.join('\n')
         }));
 
-        if (pages.some(v => v.data.description!.length > EMBED_DESCRIPTION_LIMIT)) return sendWarning(interaction, 'OVER_CHARLENGTH');
+        if (pages.some(v => v.data.description && v.data.description.length > EMBED_DESCRIPTION_LIMIT)) return sendWarning(interaction, 'OVER_CHARLENGTH');
 
         await noteSend(interaction, pages);
     }

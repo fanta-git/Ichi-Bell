@@ -142,8 +142,8 @@ export type PlayedSongs = {
 };
 
 export type FuncAPI = {
-    (url: '/api/cafe/now_playing' | '/api/cafe/next_song', queryParam?: {}): Promise<ReturnCafeSong>,
-    (url: '/api/cafe/user_count', queryParam?: {}): Promise<number>,
+    (url: '/api/cafe/now_playing' | '/api/cafe/next_song'): Promise<ReturnCafeSong>,
+    (url: '/api/cafe/user_count'): Promise<number>,
     (url: '/api/songs/by_video_ids', queryParam: { video_ids: string[] }): Promise<ReturnSongData[]>
     (url: '/api/cafe/rotate_users', queryParam: { ids: number[] }): Promise<Record<string, number[]>>
     (url: '/api/cafe/timetable', queryParam: { limit: number, with_comment?: false }): Promise<ReturnCafeSong[]>

@@ -1,13 +1,14 @@
 import axios from 'axios';
 import { FuncAPI } from './apiTypes';
 import { timer } from './embedsUtil';
+import { API_ENDPOINT } from './envs';
 
 const API_CALL_MAX_PER_SECOND = 4;
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 
 const fetchCafeAPI: FuncAPI = async (pathname, queryParam = {}) => {
     const axiosBase = axios.create({
-        baseURL: process.env.API_ENDPOINT
+        baseURL: API_ENDPOINT
     });
 
     const nowTime = Date.now();
@@ -20,7 +21,7 @@ const fetchCafeAPI: FuncAPI = async (pathname, queryParam = {}) => {
     try {
         const response = await axiosBase.get(pathname, { params: queryParam });
         console.log(`[${formated}] ${pathname}`);
-        return response.data as any;
+        return response.data;
     } catch (e) {
         if (e instanceof Error) {
             throw new Error(`${e.name}: ${e.message}`);

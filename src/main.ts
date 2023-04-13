@@ -1,12 +1,9 @@
 import * as discord from 'discord.js';
-import dotenv from 'dotenv';
 import http from 'http';
 
 import * as commands from './commands';
 import observeNextSong from './observeNextSong';
-
-dotenv.config();
-if (process.env.TOKEN === undefined) throw Error('トークンが設定されていません！');
+import { TEST_SERVER_ID, TOKEN } from './envs';
 
 const client = new discord.Client({ intents: [discord.GatewayIntentBits.Guilds] });
 const commandsMap = new Map([...Object.entries(commands)]);
@@ -16,18 +13,18 @@ const server = http.createServer((request, response) => {
 }).listen(3000);
 
 client.once('ready', async () => {
-    console.log(`${client.user!.tag} Ready!`);
+    console.log(`${client.user?.tag} Ready!`);
 
     observeNextSong(client).then(() => {
         server.close();
         client.destroy();
     });
 
-    if (process.env.TEST_SERVER_ID === undefined) {
+    if (TEST_SERVER_ID === undefined) {
         client.application?.commands.set([...commandsMap.values()]);
     } else {
         client.application?.commands.set([]);
-        client.application?.commands.set([...commandsMap.values()], process.env.TEST_SERVER_ID);
+        client.application?.commands.set([...commandsMap.values()], TEST_SERVER_ID);
     }
 });
 
@@ -57,4 +54,4 @@ client.on('interactionCreate', (interaction) => {
         });
 });
 
-client.login(process.env.TOKEN);
+client.login(TOKEN);

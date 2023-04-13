@@ -49,7 +49,7 @@ const list: SlashCommand = {
 
         const playlistDataPage = formatListDataEmbed(playlist);
 
-        const displayDataList = details.map((item, key) => ({
+        const displayDataList = details.map((item) => ({
             videoId: item.video_id,
             title: details.find(v => v.video_id === item.video_id)?.title,
             lastStartTime: playeds.find(v => v.video_id === item.video_id)?.start_time,

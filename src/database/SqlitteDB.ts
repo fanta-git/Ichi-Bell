@@ -59,7 +59,7 @@ class SqliteDB implements ListDatabase {
         }
 
         return true;
-    };
+    }
 
     async getUser (userId: string): Promise<user | undefined> {
         return await this.#usersKeyv.get(userId);
@@ -84,7 +84,7 @@ class SqliteDB implements ListDatabase {
         for (const id of targetIds) {
             const user = await this.#usersKeyv.get(id);
             if (user && user.playlist.songIds.includes(songId)) targetUsers.push(user);
-        };
+        }
 
         return targetUsers;
     }
