@@ -80,7 +80,7 @@ const list: SlashCommand = {
         const songDataPages = subdivision(playedLines, limit).map(v => ({
             title: escapeMarkdown(playlist.title),
             url: `https://kiite.jp/playlist/${playlist.listId}`,
-            description: `**全${playlist.songIds.length}曲**\n` + escapeMarkdown(v.join('\n'))
+            description: `**全${playlist.songIds.length}曲**\n` + v.join('\n')
         }));
 
         if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
