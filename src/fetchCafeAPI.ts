@@ -6,7 +6,8 @@ import { API_ENDPOINT } from './envs';
 const API_CALL_MAX_PER_SECOND = 4;
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 const axiosBase = axios.create({
-    baseURL: API_ENDPOINT
+    baseURL: API_ENDPOINT,
+    paramsSerializer: { indexes: null }
 });
 
 const fetchCafeAPI: FuncAPI = async (pathname, params = {}) => {
@@ -17,15 +18,9 @@ const fetchCafeAPI: FuncAPI = async (pathname, params = {}) => {
     if (waitTime > 0) await timer(waitTime);
     const formated = getDateString(new Date());
 
-    try {
-        const response = await axiosBase.get(pathname, { params });
-        console.log(`[${formated}] ${pathname}`);
-        return response.data;
-    } catch (e) {
-        if (e instanceof Error) {
-            throw new Error(`${e.name}: ${e.message}`);
-        }
-    }
+    const response = await axiosBase.get(pathname, { params });
+    console.log(`[${formated}] ${pathname}`);
+    return response.data;
 };
 
 const getDateString = (date: Date) =>
