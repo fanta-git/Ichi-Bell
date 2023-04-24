@@ -1,10 +1,10 @@
-import { ApplicationCommandOptionType, escapeMarkdown } from 'discord.js';
-import SlashCommand from './SlashCommand';
+import { ApplicationCommandOptionType, escapeMarkdown, time } from 'discord.js';
 import { CommandsWarn } from '../customErrors';
 import db from '../database/db';
-import { WARN_MESSAGES, formatLastPlayed, formatListDataEmbed, subdivision } from '../embedsUtil';
+import { WARN_MESSAGES, formatListDataEmbed, subdivision } from '../embedsUtil';
 import fetchCafeAPI from '../fetchCafeAPI';
 import sendNote from '../noteSend';
+import SlashCommand from './SlashCommand';
 
 const LIMIT = 10;
 const OPTIONS = {
@@ -72,9 +72,9 @@ const list: SlashCommand = {
 
         const playedLines = displayDataList.map((item, i) => {
             const title = `[${escapeMarkdown(item.title ?? '???')}](https://www.nicovideo.jp/watch/${item.videoId})`;
-            const lastPlayed = formatLastPlayed(item.lastStartTime);
+            const lastStart = item.lastStartTime ? `${time(new Date(item.lastStartTime), 'R')}に選曲されました` : '__選曲可能です__';
 
-            return `**${i + 1}.**${title}\n└${lastPlayed ? lastPlayed + 'に選曲されました' : '__選曲可能です__'}`;
+            return `**${i + 1}.**${title}\n└${lastStart}`;
         });
 
         const songDataPages = subdivision(playedLines, limit).map(v => ({

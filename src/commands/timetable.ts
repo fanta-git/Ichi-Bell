@@ -1,10 +1,10 @@
-import { ApplicationCommandOptionType, EmbedBuilder, escapeMarkdown } from 'discord.js';
-import noteSend from '../noteSend';
-import { WARN_MESSAGES, formatLastPlayed, subdivision } from '../embedsUtil';
-import fetchCafeAPI from '../fetchCafeAPI';
-import SlashCommand from './SlashCommand';
-import db from '../database/db';
+import { ApplicationCommandOptionType, EmbedBuilder, escapeMarkdown, time } from 'discord.js';
 import { CommandsWarn } from '../customErrors';
+import db from '../database/db';
+import { WARN_MESSAGES, subdivision } from '../embedsUtil';
+import fetchCafeAPI from '../fetchCafeAPI';
+import noteSend from '../noteSend';
+import SlashCommand from './SlashCommand';
 
 const LIMIT = 10;
 const OPTIONS = {
@@ -34,7 +34,7 @@ const timetable: SlashCommand = {
         const selectionIds = data.map(v => v.id);
         const rotates = await fetchCafeAPI('/api/cafe/rotate_users', { ids: selectionIds });
         const songLines = data.map((v, i) => {
-            const played = i ? `[${formatLastPlayed(v.start_time)}]` : '**[ON AIR]**';
+            const played = i ? time(new Date(v.start_time), 'R') : '**[ON AIR]**';
             const title = `[${escapeMarkdown(v.title)}](https://www.nicovideo.jp/watch/${v.video_id})`;
             const registedUnder = playlist?.songIds.includes(v.video_id) ? '__' : '';
             const newFav = `:heartpulse:${v.new_fav_user_ids?.length ?? 0}`;
