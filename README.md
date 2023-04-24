@@ -47,3 +47,7 @@ Kiiteのプレイリストを通知対象として登録します。
 ### /timetable
 Cafeでの選曲履歴を表示します。  
 `limit`オプションで1ページに表示する曲数を指定できます。  
+
+## 何かあったら
+[@fantaji_cps](https://twitter.com/fantaji_cps)まで  
+Discordでもどうぞ→ふぁんた#7605  
