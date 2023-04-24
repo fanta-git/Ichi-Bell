@@ -1,60 +1,35 @@
 import * as discord from 'discord.js';
-import dotenv from 'dotenv';
 import http from 'http';
 
 import * as commands from './commands';
 import observeNextSong from './observeNextSong';
-
-dotenv.config();
-if (process.env.TOKEN === undefined) throw Error('トークンが設定されていません！');
+import { TEST_SERVER_ID, TOKEN } from './envs';
+import executeCommand from './executeCommand';
 
 const client = new discord.Client({ intents: [discord.GatewayIntentBits.Guilds] });
-const commandsMap = new Map([...Object.entries(commands)]);
 const server = http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': 'text/plain' });
     response.end('Bot is online!');
 }).listen(3000);
 
 client.once('ready', async () => {
-    console.log(`${client.user!.tag} Ready!`);
+    console.log(`${client.user?.tag} Ready!`);
 
     observeNextSong(client).then(() => {
         server.close();
         client.destroy();
     });
 
-    if (process.env.TEST_SERVER_ID === undefined) {
-        client.application?.commands.set([...commandsMap.values()]);
+    if (TEST_SERVER_ID === undefined) {
+        client.application?.commands.set(Object.values(commands));
     } else {
         client.application?.commands.set([]);
-        client.application?.commands.set([...commandsMap.values()], process.env.TEST_SERVER_ID);
+        client.application?.commands.set(Object.values(commands), TEST_SERVER_ID);
     }
 });
 
 client.on('interactionCreate', (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
-    const calledCommand = commandsMap.get(interaction.commandName);
-    if (calledCommand === undefined) return;
-
-    calledCommand.execute(client, interaction)
-        .catch(e => {
-            console.error(e);
-            if (e instanceof Error) {
-                const sendMessage = {
-                    embeds: [{
-                        title: e.name,
-                        description: e.message,
-                        color: 0xff0000
-                    }]
-                };
-
-                if (interaction.deferred || interaction.replied) {
-                    interaction.editReply(sendMessage).catch(console.error);
-                } else {
-                    interaction.reply(sendMessage).catch(console.error);
-                }
-            }
-        });
+    executeCommand(client, interaction);
 });
 
-client.login(process.env.TOKEN);
+client.login(TOKEN);

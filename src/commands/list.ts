@@ -1,9 +1,10 @@
 import { ApplicationCommandOptionType } from 'discord.js';
-import sendNote from '../noteSend';
-import { formatLastPlayed, formatListDataEmbed, sendWarning, subdivision } from '../embedsUtil';
-import fetchCafeAPI from '../fetchCafeAPI';
-import SlashCommand from '../SlashCommand';
+import SlashCommand from './SlashCommand';
+import { CommandsWarn } from '../customErrors';
 import db from '../database/db';
+import { WARN_MESSAGES, formatLastPlayed, formatListDataEmbed, subdivision } from '../embedsUtil';
+import fetchCafeAPI from '../fetchCafeAPI';
+import sendNote from '../noteSend';
 
 const LIMIT = 10;
 const OPTIONS = {
@@ -42,14 +43,14 @@ const list: SlashCommand = {
         const sortType = interaction.options.getString(OPTIONS.SORT) ?? CHOICE.DEFAULT;
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
         const { playlist } = await db.getUser(interaction.user.id) ?? {};
-        if (playlist === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
+        if (playlist === undefined) throw new CommandsWarn(WARN_MESSAGES.NOTEXIST_LIST);
 
         const details = await fetchCafeAPI('/api/songs/by_video_ids', { video_ids: playlist.songIds });
         const playeds = await fetchCafeAPI('/api/cafe/played', { video_ids: playlist.songIds });
 
         const playlistDataPage = formatListDataEmbed(playlist);
 
-        const displayDataList = details.map((item, key) => ({
+        const displayDataList = details.map((item) => ({
             videoId: item.video_id,
             title: details.find(v => v.video_id === item.video_id)?.title,
             lastStartTime: playeds.find(v => v.video_id === item.video_id)?.start_time,
@@ -83,7 +84,7 @@ const list: SlashCommand = {
         }));
 
         if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
-            return sendWarning(interaction, 'OVER_CHARLENGTH');
+            throw new CommandsWarn(WARN_MESSAGES.OVER_CHARLENGTH);
         }
 
         await sendNote(interaction, [playlistDataPage, ...songDataPages]);

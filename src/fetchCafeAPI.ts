@@ -1,18 +1,16 @@
-import fetch, { Response } from 'node-fetch';
-
+import axios from 'axios';
 import { FuncAPI } from './apiTypes';
 import { timer } from './embedsUtil';
+import { API_ENDPOINT } from './envs';
 
 const API_CALL_MAX_PER_SECOND = 4;
-const FETCH_INIT = {
-    timeout: 15e3,
-    retry: 3
-};
-
-const apiURL = new URL(process.env.API_ENDPOINT ?? 'https://cafe.kiite.jp');
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
+const axiosBase = axios.create({
+    baseURL: API_ENDPOINT,
+    paramsSerializer: { indexes: null }
+});
 
-const fetchCafeAPI: FuncAPI = async (pathname, queryParam = {}) => {
+const fetchCafeAPI: FuncAPI = async (pathname, params = {}) => {
     const nowTime = Date.now();
     const waitTime = Math.max(apiCallHist[0] + 1e3 - nowTime, 0);
     apiCallHist.shift();
@@ -20,29 +18,10 @@ const fetchCafeAPI: FuncAPI = async (pathname, queryParam = {}) => {
     if (waitTime > 0) await timer(waitTime);
     const formated = getDateString(new Date());
 
-    const search = new URLSearchParams(queryParam as any).toString();
-    Object.assign(apiURL, { pathname, search });
-    try {
-        const response = await attemptFetch(apiURL, FETCH_INIT);
-        console.log(`[${formated}] ${pathname}`);
-        return await response.json() as any;
-    } catch (e) {
-        if (e instanceof Error) {
-            throw new Error(`${e.name}: ${e.message}`);
-        }
-    }
+    const response = await axiosBase.get(pathname, { params });
+    console.log(`[${formated}] ${pathname}`);
+    return response.data;
 };
-
-const attemptFetch = (url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1] & { retry?: number }): Promise<Response> =>
-    new Promise<Response>((resolve, reject) =>
-        fetch(url, init).then(response =>
-            response.ok
-                ? resolve(response)
-                : init?.retry
-                    ? resolve(attemptFetch(url, { ...init, retry: init.retry - 1 }))
-                    : reject(Error(`${response.status} ${response.statusText}`))
-        )
-    );
 
 const getDateString = (date: Date) =>
     `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}.${date.getMilliseconds().toString().padStart(3, '0')}`;

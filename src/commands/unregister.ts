@@ -1,7 +1,8 @@
 import { ApplicationCommandOptionType, PermissionFlagsBits } from 'discord.js';
+import SlashCommand from './SlashCommand';
 import db from '../database/db';
-import { sendWarning } from '../embedsUtil';
-import SlashCommand from '../SlashCommand';
+import { CommandsWarn } from '../customErrors';
+import { WARN_MESSAGES } from '../embedsUtil';
 
 const OPTIONS = {
     TARGET: 'target'
@@ -23,11 +24,11 @@ const unregister: SlashCommand = {
         await interaction.deferReply({ ephemeral: isMyself });
 
         const data = await db.getUser(target.id);
-        if (data === undefined) return sendWarning(interaction, 'NOTEXIST_LIST');
-        if (!isMyself && interaction.channelId !== data.channelId) return sendWarning(interaction, 'INVAILD_CHANNEL');
+        if (data === undefined) throw new CommandsWarn(WARN_MESSAGES.NOTEXIST_LIST);
+        if (!isMyself && interaction.channelId !== data.channelId) throw new CommandsWarn(WARN_MESSAGES.INVAILD_CHANNEL);
 
         if (!isMyself && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
-            return sendWarning(interaction, 'PERMISSION_MISSING');
+            throw new CommandsWarn(WARN_MESSAGES.PERMISSION_MISSING);
         }
 
         await db.deleateUser(target.id);

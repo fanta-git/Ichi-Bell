@@ -1,5 +1,5 @@
 import fetchCafeAPI from '../fetchCafeAPI';
-import SlashCommand from '../SlashCommand';
+import SlashCommand from './SlashCommand';
 
 const now: SlashCommand = {
     name: 'now',

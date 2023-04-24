@@ -1,3 +1,5 @@
+import { ReturnCafeSong } from '../apiTypes';
+
 export type playlist = {
     listId: string,
     title: string,
@@ -20,8 +22,8 @@ interface ListDatabase {
     deleateUser (userId: string): awaitable<boolean>
     getTargetUsers (songId: string): awaitable<user[]>
 
-    setLeatestRing (selectionId: number): awaitable<boolean>
-    getLeatestRing (): awaitable<number | undefined>
+    setRinged (selectionId: ReturnCafeSong): awaitable<boolean>
+    getRinged (): awaitable<ReturnCafeSong | undefined>
 }
 
 export default ListDatabase;

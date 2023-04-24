@@ -53,7 +53,7 @@ const noteSend = async (interaction: discord.CommandInteraction, embeds: embed[]
     });
 };
 
-const createMessage = (embeds: embed[], currentPage: number, displayJump: boolean = false) => ({
+const createMessage = (embeds: embed[], currentPage: number, displayJump = false) => ({
     embeds: [embeds[currentPage]],
     components: [
         new discord.ActionRowBuilder<discord.ButtonBuilder | discord.SelectMenuBuilder>({
