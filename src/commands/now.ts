@@ -1,3 +1,4 @@
+import { escapeMarkdown } from 'discord.js';
 import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from './SlashCommand';
 
@@ -13,10 +14,10 @@ const now: SlashCommand = {
         const artistData = await fetchCafeAPI('/api/artist/id', { artist_id: nowSong.artist_id });
         await interaction.editReply({
             embeds: [{
-                title: nowSong.title,
+                title: escapeMarkdown(nowSong.title),
                 url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
                 author: {
-                    name: nowSong.baseinfo.user_nickname,
+                    name: escapeMarkdown(nowSong.baseinfo.user_nickname),
                     icon_url: nowSong.baseinfo.user_icon_url,
                     url: 'https://kiite.jp/creator/' + artistData?.creator_id ?? ''
                 },

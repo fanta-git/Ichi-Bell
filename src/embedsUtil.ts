@@ -1,3 +1,4 @@
+import { escapeMarkdown } from 'discord.js';
 import { PlaylistContents } from './apiTypes';
 import { playlist } from './database/ListDatabase';
 
@@ -10,9 +11,9 @@ export const formatPlaylist = (playlist: PlaylistContents): playlist => ({
 });
 
 export const formatListDataEmbed = (list: playlist) => ({
-    title: `${list.title}`,
+    title: escapeMarkdown(list.title),
     url: `https://kiite.jp/playlist/${list.listId}`,
-    description: `**全${list.songIds.length}曲**\n${list.description}`,
+    description: `**全${list.songIds.length}曲**\n${escapeMarkdown(list.description)}`,
     footer: { text: `最終更新: ${list.updatedAt}` }
 });
 

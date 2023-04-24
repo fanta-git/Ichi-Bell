@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js';
+import { ApplicationCommandOptionType, EmbedBuilder, escapeMarkdown } from 'discord.js';
 import noteSend from '../noteSend';
 import { WARN_MESSAGES, formatLastPlayed, subdivision } from '../embedsUtil';
 import fetchCafeAPI from '../fetchCafeAPI';
@@ -35,7 +35,7 @@ const timetable: SlashCommand = {
         const rotates = await fetchCafeAPI('/api/cafe/rotate_users', { ids: selectionIds });
         const songLines = data.map((v, i) => {
             const played = i ? `[${formatLastPlayed(v.start_time)}]` : '**[ON AIR]**';
-            const title = `[${v.title}](https://www.nicovideo.jp/watch/${v.video_id})`;
+            const title = `[${escapeMarkdown(v.title)}](https://www.nicovideo.jp/watch/${v.video_id})`;
             const registedUnder = playlist?.songIds.includes(v.video_id) ? '__' : '';
             const newFav = `:heartpulse:${v.new_fav_user_ids?.length ?? 0}`;
             const rotate = `:arrows_counterclockwise:${rotates[v.id]?.length ?? 0}`;

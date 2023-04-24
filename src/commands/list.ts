@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType } from 'discord.js';
+import { ApplicationCommandOptionType, escapeMarkdown } from 'discord.js';
 import SlashCommand from './SlashCommand';
 import { CommandsWarn } from '../customErrors';
 import db from '../database/db';
@@ -71,16 +71,16 @@ const list: SlashCommand = {
         }
 
         const playedLines = displayDataList.map((item, i) => {
-            const title = `[${item.title}](https://www.nicovideo.jp/watch/${item.videoId})`;
+            const title = `[${escapeMarkdown(item.title ?? '???')}](https://www.nicovideo.jp/watch/${item.videoId})`;
             const lastPlayed = formatLastPlayed(item.lastStartTime);
 
             return `**${i + 1}.**${title}\n└${lastPlayed ? lastPlayed + 'に選曲されました' : '__選曲可能です__'}`;
         });
 
         const songDataPages = subdivision(playedLines, limit).map(v => ({
-            title: `${playlist.title}`,
+            title: escapeMarkdown(playlist.title),
             url: `https://kiite.jp/playlist/${playlist.listId}`,
-            description: `**全${playlist.songIds.length}曲**\n` + v.join('\n')
+            description: `**全${playlist.songIds.length}曲**\n` + escapeMarkdown(v.join('\n'))
         }));
 
         if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
