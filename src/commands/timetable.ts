@@ -1,9 +1,10 @@
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js';
 import noteSend from '../noteSend';
-import { formatLastPlayed, sendWarning, subdivision } from '../embedsUtil';
+import { WARN_MESSAGES, formatLastPlayed, subdivision } from '../embedsUtil';
 import fetchCafeAPI from '../fetchCafeAPI';
-import SlashCommand from '../SlashCommand';
+import SlashCommand from './SlashCommand';
 import db from '../database/db';
+import { CommandsWarn } from '../customErrors';
 
 const LIMIT = 10;
 const OPTIONS = {
@@ -47,7 +48,7 @@ const timetable: SlashCommand = {
             description: v.join('\n')
         }));
 
-        if (pages.some(v => v.data.description && v.data.description.length > EMBED_DESCRIPTION_LIMIT)) return sendWarning(interaction, 'OVER_CHARLENGTH');
+        if (pages.some(v => v.data.description && v.data.description.length > EMBED_DESCRIPTION_LIMIT)) throw new CommandsWarn(WARN_MESSAGES.OVER_CHARLENGTH);
 
         await noteSend(interaction, pages);
     }

@@ -1,8 +1,9 @@
 import fetchCafeAPI from '../fetchCafeAPI';
-import SlashCommand from '../SlashCommand';
-import { formatListDataEmbed, formatPlaylist, sendWarning } from '../embedsUtil';
+import SlashCommand from './SlashCommand';
+import { WARN_MESSAGES, formatListDataEmbed, formatPlaylist } from '../embedsUtil';
 import { ApplicationCommandOptionType } from 'discord.js';
 import db from '../database/db';
+import { CommandsWarn } from '../customErrors';
 
 const OPTIONS = {
     URL: 'url'
@@ -22,9 +23,9 @@ const register: SlashCommand = {
 
         const url = interaction.options.getString(OPTIONS.URL) as string;
         const [listId] = url.match(/(?<=https:\/\/kiite.jp\/playlist\/)\w+/) ?? [];
-        if (!listId) return sendWarning(interaction, 'INVALID_LISTURL');
+        if (!listId) throw new CommandsWarn(WARN_MESSAGES.INVALID_LISTURL);
         const songListData = await fetchCafeAPI('/api/playlists/contents/detail', { list_id: listId });
-        if (songListData.status === 'failed') return sendWarning(interaction, 'FAILD_FETCH_LIST_URL');
+        if (songListData.status === 'failed') throw new CommandsWarn(WARN_MESSAGES.FAILD_FETCH_LIST_URL);
 
         const formated = formatPlaylist(songListData);
 

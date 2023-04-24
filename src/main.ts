@@ -4,9 +4,9 @@ import http from 'http';
 import * as commands from './commands';
 import observeNextSong from './observeNextSong';
 import { TEST_SERVER_ID, TOKEN } from './envs';
+import executeCommand from './executeCommand';
 
 const client = new discord.Client({ intents: [discord.GatewayIntentBits.Guilds] });
-const commandsMap = new Map([...Object.entries(commands)]);
 const server = http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': 'text/plain' });
     response.end('Bot is online!');
@@ -21,37 +21,15 @@ client.once('ready', async () => {
     });
 
     if (TEST_SERVER_ID === undefined) {
-        client.application?.commands.set([...commandsMap.values()]);
+        client.application?.commands.set(Object.values(commands));
     } else {
         client.application?.commands.set([]);
-        client.application?.commands.set([...commandsMap.values()], TEST_SERVER_ID);
+        client.application?.commands.set(Object.values(commands), TEST_SERVER_ID);
     }
 });
 
 client.on('interactionCreate', (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
-    const calledCommand = commandsMap.get(interaction.commandName);
-    if (calledCommand === undefined) return;
-
-    calledCommand.execute(client, interaction)
-        .catch(e => {
-            console.error(e);
-            if (e instanceof Error) {
-                const sendMessage = {
-                    embeds: [{
-                        title: e.name,
-                        description: e.message,
-                        color: 0xff0000
-                    }]
-                };
-
-                if (interaction.deferred || interaction.replied) {
-                    interaction.editReply(sendMessage).catch(console.error);
-                } else {
-                    interaction.reply(sendMessage).catch(console.error);
-                }
-            }
-        });
+    executeCommand(client, interaction);
 });
 
 client.login(TOKEN);
