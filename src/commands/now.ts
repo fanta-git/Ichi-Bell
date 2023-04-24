@@ -51,12 +51,12 @@ const now: SlashCommand = {
 };
 
 const formatStatusbar = (nowVal: number, maxVal: number, barLength: number) => {
-    const nowLength = nowVal * (barLength - 1) / maxVal | 0;
+    const nowLength = nowVal * barLength / maxVal | 0;
     const statusbarArr: string[] = new Array(barLength).fill('').map((_, i) => {
-        if (i === 0) return (nowLength > 0) ? '┣' : '┠';
-        if (i === barLength - 1) return (barLength - 1 <= nowLength) ? '┫' : '┤';
-        if (i === nowLength) return '╉';
-        return (i < nowLength) ? '━' : '─';
+        if (i === nowLength) return '○';
+        if (i === 0) return '╞';
+        if (i === barLength - 1) return '╡';
+        return '═';
     });
     return statusbarArr.join('');
 };
