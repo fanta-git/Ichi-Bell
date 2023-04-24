@@ -1,4 +1,5 @@
 import axios from 'axios';
+import qs from 'qs';
 import { FuncAPI } from './apiTypes';
 import { timer } from './embedsUtil';
 import { API_ENDPOINT } from './envs';
@@ -7,7 +8,9 @@ const API_CALL_MAX_PER_SECOND = 4;
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
 const axiosBase = axios.create({
     baseURL: API_ENDPOINT,
-    paramsSerializer: { indexes: null }
+    paramsSerializer: {
+        serialize: params => qs.stringify(params, { arrayFormat: 'comma' })
+    }
 });
 
 const fetchCafeAPI: FuncAPI = async (pathname, params = {}) => {
