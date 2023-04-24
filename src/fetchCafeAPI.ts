@@ -5,12 +5,11 @@ import { API_ENDPOINT } from './envs';
 
 const API_CALL_MAX_PER_SECOND = 4;
 const apiCallHist: number[] = new Array(API_CALL_MAX_PER_SECOND).fill(0);
+const axiosBase = axios.create({
+    baseURL: API_ENDPOINT
+});
 
-const fetchCafeAPI: FuncAPI = async (pathname, queryParam = {}) => {
-    const axiosBase = axios.create({
-        baseURL: API_ENDPOINT
-    });
-
+const fetchCafeAPI: FuncAPI = async (pathname, params = {}) => {
     const nowTime = Date.now();
     const waitTime = Math.max(apiCallHist[0] + 1e3 - nowTime, 0);
     apiCallHist.shift();
@@ -19,7 +18,7 @@ const fetchCafeAPI: FuncAPI = async (pathname, queryParam = {}) => {
     const formated = getDateString(new Date());
 
     try {
-        const response = await axiosBase.get(pathname, { params: queryParam });
+        const response = await axiosBase.get(pathname, { params });
         console.log(`[${formated}] ${pathname}`);
         return response.data;
     } catch (e) {
