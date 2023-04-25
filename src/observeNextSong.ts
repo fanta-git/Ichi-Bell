@@ -68,7 +68,6 @@ const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
     }
 
     await timer(timeDuration(songData.start_time));
-    console.log(songData);
 
     for (const msg of sendedMessages) {
         msg.edit(msg.content.replace(NOTICE_MSG, `__${songData.title}__が流れたよ！`));
