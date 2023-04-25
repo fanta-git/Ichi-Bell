@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, EmbedBuilder, escapeMarkdown, time } from 'discord.js';
+import { ApplicationCommandOptionType, EmbedBuilder, escapeMarkdown, hyperlink, time } from 'discord.js';
 import { CommandsWarn } from '../customErrors';
 import db from '../database/db';
 import { WARN_MESSAGES, subdivision } from '../embedsUtil';
@@ -35,12 +35,12 @@ const timetable: SlashCommand = {
         const rotates = await fetchCafeAPI('/api/cafe/rotate_users', { ids: selectionIds });
         const songLines = data.map((v, i) => {
             const played = i ? time(new Date(v.start_time), 'R') : '**[ON AIR]**';
-            const title = `[${escapeMarkdown(v.title)}](https://www.nicovideo.jp/watch/${v.video_id})`;
-            const registedUnder = playlist?.songIds.includes(v.video_id) ? '__' : '';
+            const title = hyperlink(escapeMarkdown(v.title), `https://www.nicovideo.jp/watch/${v.video_id}`);
+            const decorated = playlist?.songIds.includes(v.video_id) ? `__${title}__` : title;
             const newFav = `:heartpulse:${v.new_fav_user_ids?.length ?? 0}`;
             const rotate = `:arrows_counterclockwise:${rotates[v.id]?.length ?? 0}`;
 
-            return `**${i + 1}.**${registedUnder}${title}${registedUnder}\n└${played}${newFav}${rotate}`;
+            return `${played} ${decorated}\n└${newFav}${rotate}`;
         });
 
         const pages = subdivision(songLines, limit).map(v => new EmbedBuilder({

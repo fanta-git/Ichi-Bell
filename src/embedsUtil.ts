@@ -1,4 +1,4 @@
-import { CommandInteraction, InteractionEditReplyOptions, InteractionReplyOptions, MessagePayload, escapeMarkdown } from 'discord.js';
+import { CommandInteraction, EmbedBuilder, InteractionEditReplyOptions, InteractionReplyOptions, MessagePayload, bold, channelLink, escapeMarkdown, inlineCode } from 'discord.js';
 import { PlaylistContents } from './apiTypes';
 import { playlist } from './database/ListDatabase';
 
@@ -10,11 +10,25 @@ export const formatPlaylist = (playlist: PlaylistContents): playlist => ({
     songIds: playlist.songs.map(v => v.video_id)
 });
 
-export const formatListDataEmbed = (list: playlist) => ({
-    title: escapeMarkdown(list.title),
-    url: `https://kiite.jp/playlist/${list.listId}`,
-    description: `**全${list.songIds.length}曲**\n${escapeMarkdown(list.description)}`,
-    footer: { text: `最終更新: ${list.updatedAt}` }
+const abbreviate = (str: string) => {
+    const lines = str.split('\n');
+    if (lines.length <= 1) return str;
+    return lines.slice(0, 4).join('\n') + '\n…';
+};
+
+export const formatListDataEmbed = (list: playlist, noticeChannelId: string) => new EmbedBuilder({
+    ...formatTitle(list),
+    description: abbreviate(list.description),
+    fields: [
+        { name: ':loudspeaker:通知場所', value: channelLink(noticeChannelId), inline: true }
+    ],
+    footer: { text: '最終更新' },
+    timestamp: list.updatedAt
+});
+
+export const formatTitle = (list: playlist) => ({
+    title: `${bold(escapeMarkdown(list.title))}${inlineCode(`（全${list.songIds.length}曲）`)}`,
+    url: `https://kiite.jp/playlist/${list.listId}`
 });
 
 export const subdivision = <T>(array: T[], number: number):T[][] => {

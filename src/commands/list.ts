@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType, escapeMarkdown, hyperlink, time } from 'discord.js';
 import { CommandsWarn } from '../customErrors';
 import db from '../database/db';
-import { WARN_MESSAGES, formatListDataEmbed, subdivision } from '../embedsUtil';
+import { WARN_MESSAGES, formatListDataEmbed, formatTitle, subdivision } from '../embedsUtil';
 import fetchCafeAPI from '../fetchCafeAPI';
 import sendNote from '../noteSend';
 import SlashCommand from './SlashCommand';
@@ -58,13 +58,14 @@ const list: SlashCommand = {
 
         const sortType = interaction.options.getString(OPTIONS.SORT) ?? CHOICE.DEFAULT;
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
-        const { playlist } = await db.getUser(interaction.user.id) ?? {};
-        if (playlist === undefined) throw new CommandsWarn(WARN_MESSAGES.NOTEXIST_LIST);
+        const user = await db.getUser(interaction.user.id);
+        if (user === undefined) throw new CommandsWarn(WARN_MESSAGES.NOTEXIST_LIST);
+        const { playlist, channelId } = user;
 
         const details = await fetchCafeAPI('/api/songs/by_video_ids', { video_ids: playlist.songIds });
         const playeds = await fetchCafeAPI('/api/cafe/played', { video_ids: playlist.songIds });
 
-        const playlistDataPage = formatListDataEmbed(playlist);
+        const playlistDataPage = formatListDataEmbed(playlist, channelId);
 
         const dateOrUndefined = (time: string | undefined) => time === undefined ? undefined : new Date(time);
         const displayDataList = details.map((item) => ({
@@ -77,17 +78,16 @@ const list: SlashCommand = {
         const sorted = sorter[sortType]?.(displayDataList);
         if (sorted === undefined) throw new Error(`不適切なオプション値（${sortType}）`);
 
-        const playedLines = sorted.map((item, i) => {
+        const playedLines = sorted.map((item) => {
             const title = hyperlink(escapeMarkdown(item.title), `https://www.nicovideo.jp/watch/${item.videoId}`);
-            const lastStart = item.lastStartTime ? `${time(item.lastStartTime, 'R')}に選曲されました` : '__選曲可能です__';
+            const lastStart = item.lastStartTime ? time(item.lastStartTime, 'R') : '⭕';
 
-            return `**${i + 1}.**${title}\n└${lastStart}`;
+            return `${lastStart} ${title}`;
         });
 
         const songDataPages = subdivision(playedLines, limit).map(v => ({
-            title: escapeMarkdown(playlist.title),
-            url: `https://kiite.jp/playlist/${playlist.listId}`,
-            description: `**全${playlist.songIds.length}曲**\n` + v.join('\n')
+            ...formatTitle(playlist),
+            description: v.join('\n')
         }));
 
         if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {

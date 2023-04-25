@@ -25,7 +25,7 @@ const update: SlashCommand = {
 
         await interaction.editReply({
             content: '以下のリストから通知リストを更新しました！',
-            embeds: [formatListDataEmbed(formated)]
+            embeds: [formatListDataEmbed(formated, interaction.channelId)]
         });
     }
 };

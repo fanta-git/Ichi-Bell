@@ -37,7 +37,7 @@ const register: SlashCommand = {
 
         await interaction.editReply({
             content: '以下のリストを通知リストとして登録しました！',
-            embeds: [formatListDataEmbed(formated)]
+            embeds: [formatListDataEmbed(formated, interaction.channelId)]
         });
     }
 };
