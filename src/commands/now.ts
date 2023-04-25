@@ -2,6 +2,8 @@ import { escapeMarkdown } from 'discord.js';
 import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from './SlashCommand';
 
+const SEEKBAR_LENGTH = 12;
+
 const now: SlashCommand = {
     name: 'now',
     description: 'Cafeで今流れている曲やCafeにいる人数などを表示します',
@@ -25,7 +27,7 @@ const now: SlashCommand = {
                 color: parseInt(nowSong.colors[0].slice(1), 16),
                 fields: [
                     {
-                        name: formatStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),
+                        name: formatStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, SEEKBAR_LENGTH),
                         value: `${msTommss(Date.now() - Date.parse(nowSong.start_time))} / ${msTommss(nowSong.msec_duration)}`,
                         inline: false
                     },

@@ -1,10 +1,18 @@
-import { ApplicationCommandOptionType, escapeMarkdown, time } from 'discord.js';
+import { ApplicationCommandOptionType, escapeMarkdown, hyperlink, time } from 'discord.js';
 import { CommandsWarn } from '../customErrors';
 import db from '../database/db';
 import { WARN_MESSAGES, formatListDataEmbed, subdivision } from '../embedsUtil';
 import fetchCafeAPI from '../fetchCafeAPI';
 import sendNote from '../noteSend';
 import SlashCommand from './SlashCommand';
+import { sort } from 'fast-sort';
+
+type DisplayDataList = {
+    videoId: string;
+    title: string;
+    lastStartTime: Date | undefined;
+    order: number;
+}[];
 
 const LIMIT = 10;
 const OPTIONS = {
@@ -16,6 +24,14 @@ const CHOICE = {
     COOLTIME: 'cooltime'
 } as const;
 const EMBED_DESCRIPTION_LIMIT = 4096;
+
+const sorter: Record<string, ((arr: DisplayDataList) => DisplayDataList) | undefined> = {
+    [CHOICE.DEFAULT]: arr => sort(arr).asc(v => v.order),
+    [CHOICE.COOLTIME]: arr => sort(arr).by([
+        { desc: v => v.lastStartTime?.getTime() },
+        { asc: v => v.order }
+    ])
+};
 
 const list: SlashCommand = {
     name: 'list',
@@ -50,29 +66,20 @@ const list: SlashCommand = {
 
         const playlistDataPage = formatListDataEmbed(playlist);
 
+        const dateOrUndefined = (time: string | undefined) => time === undefined ? undefined : new Date(time);
         const displayDataList = details.map((item) => ({
             videoId: item.video_id,
-            title: details.find(v => v.video_id === item.video_id)?.title,
-            lastStartTime: playeds.find(v => v.video_id === item.video_id)?.start_time,
+            title: item.title,
+            lastStartTime: dateOrUndefined(playeds.find(v => v.video_id === item.video_id)?.start_time),
             order: playlist.songIds.indexOf(item.video_id)
         }));
 
-        if (sortType === CHOICE.DEFAULT) {
-            displayDataList.sort((a, b) => a.order - b.order);
-        }
+        const sorted = sorter[sortType]?.(displayDataList);
+        if (sorted === undefined) throw new Error(`不適切なオプション値（${sortType}）`);
 
-        if (sortType === CHOICE.COOLTIME) {
-            displayDataList.sort((a, b) => {
-                if (a.lastStartTime === undefined && b.lastStartTime === undefined) return a.order - b.order;
-                if (a.lastStartTime === undefined) return -1;
-                if (b.lastStartTime === undefined) return 1;
-                return Date.parse(a.lastStartTime) - Date.parse(b.lastStartTime);
-            });
-        }
-
-        const playedLines = displayDataList.map((item, i) => {
-            const title = `[${escapeMarkdown(item.title ?? '???')}](https://www.nicovideo.jp/watch/${item.videoId})`;
-            const lastStart = item.lastStartTime ? `${time(new Date(item.lastStartTime), 'R')}に選曲されました` : '__選曲可能です__';
+        const playedLines = sorted.map((item, i) => {
+            const title = hyperlink(escapeMarkdown(item.title), `https://www.nicovideo.jp/watch/${item.videoId}`);
+            const lastStart = item.lastStartTime ? `${time(item.lastStartTime, 'R')}に選曲されました` : '__選曲可能です__';
 
             return `**${i + 1}.**${title}\n└${lastStart}`;
         });
