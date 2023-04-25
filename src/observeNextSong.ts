@@ -22,7 +22,7 @@ const observeNextSong = async (client: discord.Client) => {
 
             const nextSong = await waitRingAt();
             const lastSendSong = await db.getRinged();
-            if (lastSendSong && lastSendSong.id !== nextSong.id) {
+            if (lastSendSong === undefined || lastSendSong.id !== nextSong.id) {
                 db.setRinged(nextSong);
                 ringBell(client, nextSong);
             }
@@ -68,6 +68,7 @@ const ringBell = async (client: discord.Client, songData: ReturnCafeSong) => {
     }
 
     await timer(timeDuration(songData.start_time));
+    console.log(songData);
 
     for (const msg of sendedMessages) {
         msg.edit(msg.content.replace(NOTICE_MSG, `__${songData.title}__が流れたよ！`));
