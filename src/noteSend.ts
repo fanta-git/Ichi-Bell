@@ -1,4 +1,5 @@
 import discord from 'discord.js';
+import { customReply } from './embedsUtil';
 
 const TIMEOUT = 60e3;
 
@@ -14,13 +15,8 @@ type embed = discord.JSONEncodable<discord.APIEmbed> | discord.APIEmbed;
 const noteSend = async (interaction: discord.CommandInteraction, embeds: embed[]) => {
     let currentPage = 0;
     const sendMessage = createMessage(embeds, currentPage);
-    if (interaction.deferred || interaction.replied) {
-        await interaction.editReply(sendMessage);
-    } else {
-        await interaction.reply(sendMessage);
-    }
+    const reply = await customReply(interaction, sendMessage);
 
-    const reply = await interaction.fetchReply();
     const collector = reply.createMessageComponentCollector({
         filter: v => v.user.id === interaction.user.id,
         idle: TIMEOUT
@@ -32,7 +28,7 @@ const noteSend = async (interaction: discord.CommandInteraction, embeds: embed[]
         } else if (item.customId === CUSTOM_ID.NEXT) {
             currentPage++;
         } else if (item.customId === CUSTOM_ID.SELECT) {
-            if (item.isSelectMenu()) currentPage = Number(item.values[0]);
+            if (item.isStringSelectMenu()) currentPage = Number(item.values[0]);
         }
 
         const showJumpMenu = item.customId === CUSTOM_ID.JUMP;
@@ -56,7 +52,7 @@ const noteSend = async (interaction: discord.CommandInteraction, embeds: embed[]
 const createMessage = (embeds: embed[], currentPage: number, displayJump = false) => ({
     embeds: [embeds[currentPage]],
     components: [
-        new discord.ActionRowBuilder<discord.ButtonBuilder | discord.SelectMenuBuilder>({
+        new discord.ActionRowBuilder<discord.ButtonBuilder | discord.StringSelectMenuBuilder>({
             components: displayJump
                 ? createJumpComponent(currentPage, embeds.length)
                 : createMoveComponent(currentPage, embeds.length)
@@ -66,10 +62,10 @@ const createMessage = (embeds: embed[], currentPage: number, displayJump = false
 });
 
 const createJumpComponent = (currentPage: number, maxPage: number) => [
-    new discord.SelectMenuBuilder({
+    new discord.StringSelectMenuBuilder({
         custom_id: CUSTOM_ID.SELECT,
-        type: discord.ComponentType.SelectMenu,
-        options: Array(maxPage + 1).fill(undefined).map((_, i) => ({
+        type: discord.ComponentType.StringSelect,
+        options: Array(maxPage).fill(undefined).map((_, i) => ({
             label: `${i + 1}ページ目`,
             value: String(i),
             default: i === currentPage

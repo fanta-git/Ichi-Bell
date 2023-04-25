@@ -1,4 +1,4 @@
-import { escapeMarkdown } from 'discord.js';
+import { CommandInteraction, InteractionEditReplyOptions, InteractionReplyOptions, MessagePayload, escapeMarkdown } from 'discord.js';
 import { PlaylistContents } from './apiTypes';
 import { playlist } from './database/ListDatabase';
 
@@ -39,3 +39,9 @@ export const WARN_MESSAGES = {
     PERMISSION_MISSING: '権限がありません\n指定ユーザーのリスト登録解除にはチャンネルの管理権限が必要です！',
     LIST_IS_LATEST: 'プレイリストは最新の状態です！\n通知するチャンネルを変更するときは変更先のチャンネルでコマンドを実行してください！'
 } as const;
+
+export const customReply = async (interaction: CommandInteraction, message: string | MessagePayload | (InteractionEditReplyOptions & InteractionReplyOptions)) => {
+    if (interaction.deferred || interaction.replied) return interaction.editReply(message);
+    const reply = await interaction.reply(message);
+    return reply.fetch();
+};

@@ -1,6 +1,7 @@
 import * as discord from 'discord.js';
 import * as commands from './commands';
 import { CommandsWarn } from './customErrors';
+import { customReply } from './embedsUtil';
 
 const commandsMap = new Map([...Object.entries(commands)]);
 
@@ -14,14 +15,14 @@ const executeCommand = async (client: discord.Client<boolean>, interaction: disc
         await calledCommand.execute(client, interaction);
     } catch (e) {
         if (e instanceof CommandsWarn) {
-            customReply(interaction, {
+            await customReply(interaction, {
                 embeds: [{
                     description: e.message,
                     color: 0xffff00
                 }]
             });
         } else if (e instanceof Error) {
-            customReply(interaction, {
+            await customReply(interaction, {
                 embeds: [{
                     description: '不明なエラー',
                     color: 0xff0000
@@ -29,14 +30,6 @@ const executeCommand = async (client: discord.Client<boolean>, interaction: disc
             });
             console.error(e);
         }
-    }
-};
-
-const customReply = (interaction: discord.ChatInputCommandInteraction<discord.CacheType>, message: string | discord.MessagePayload | (discord.InteractionEditReplyOptions & discord.InteractionReplyOptions)) => {
-    if (interaction.deferred || interaction.replied) {
-        interaction.editReply(message);
-    } else {
-        interaction.reply(message);
     }
 };
 
