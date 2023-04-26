@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, EmbedBuilder, escapeMarkdown, hyperlink, time } from 'discord.js';
+import { ApplicationCommandOptionType, EmbedBuilder, escapeMarkdown, hyperlink, time, underscore } from 'discord.js';
 import { CommandsWarn } from '../customErrors';
 import db from '../database/db';
 import { WARN_MESSAGES, subdivision } from '../embedsUtil';
@@ -33,10 +33,10 @@ const timetable: SlashCommand = {
         const data = await fetchCafeAPI('/api/cafe/timetable', { limit: 100 });
         const selectionIds = data.map(v => v.id);
         const rotates = await fetchCafeAPI('/api/cafe/rotate_users', { ids: selectionIds });
-        const songLines = data.map((v, i) => {
-            const played = i ? time(new Date(v.start_time), 'R') : '**[ON AIR]**';
+        const songLines = data.map(v => {
+            const played = time(new Date(v.start_time), 'R');
             const title = hyperlink(escapeMarkdown(v.title), `https://www.nicovideo.jp/watch/${v.video_id}`);
-            const decorated = playlist?.songIds.includes(v.video_id) ? `__${title}__` : title;
+            const decorated = playlist?.songIds.includes(v.video_id) ? underscore(title) : title;
             const newFav = `:heartpulse:${v.new_fav_user_ids?.length ?? 0}`;
             const rotate = `:arrows_counterclockwise:${rotates[v.id]?.length ?? 0}`;
 

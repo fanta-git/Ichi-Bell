@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, PermissionFlagsBits } from 'discord.js';
+import { ApplicationCommandOptionType, PermissionFlagsBits, userMention } from 'discord.js';
 import SlashCommand from './SlashCommand';
 import db from '../database/db';
 import { CommandsWarn } from '../customErrors';
@@ -34,7 +34,7 @@ const unregister: SlashCommand = {
         await db.deleateUser(target.id);
 
         await interaction.editReply({
-            content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
+            content: isMyself ? 'リストの登録を解除しました！' : `${userMention(target.id)}のリストの登録を解除しました！`
         });
     }
 };

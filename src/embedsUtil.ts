@@ -1,4 +1,4 @@
-import { CommandInteraction, EmbedBuilder, InteractionEditReplyOptions, InteractionReplyOptions, MessagePayload, bold, channelLink, escapeMarkdown, inlineCode } from 'discord.js';
+import { CommandInteraction, EmbedBuilder, InteractionEditReplyOptions, InteractionReplyOptions, MessagePayload, bold, channelLink, escapeMarkdown, inlineCode, quote } from 'discord.js';
 import { PlaylistContents } from './apiTypes';
 import { playlist } from './database/ListDatabase';
 
@@ -10,18 +10,16 @@ export const formatPlaylist = (playlist: PlaylistContents): playlist => ({
     songIds: playlist.songs.map(v => v.video_id)
 });
 
+const MAX_LINES = 5;
 const abbreviate = (str: string) => {
     const lines = str.split('\n');
-    if (lines.length <= 1) return str;
-    return lines.slice(0, 4).join('\n') + '\n…';
+    const abbreviated = lines.length <= MAX_LINES ? lines : lines.splice(0, MAX_LINES - 1).concat('…');
+    return abbreviated.map(quote).join('\n');
 };
 
 export const formatListDataEmbed = (list: playlist, noticeChannelId: string) => new EmbedBuilder({
     ...formatTitle(list),
-    description: abbreviate(list.description),
-    fields: [
-        { name: ':loudspeaker:通知場所', value: channelLink(noticeChannelId), inline: true }
-    ],
+    description: `${abbreviate(escapeMarkdown(list.description))}\n:loudspeaker:通知場所：${channelLink(noticeChannelId)}`,
     footer: { text: '最終更新' },
     timestamp: list.updatedAt
 });
