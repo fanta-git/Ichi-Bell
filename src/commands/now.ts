@@ -7,7 +7,7 @@ const SEEKBAR_LENGTH = 12;
 const now: SlashCommand = {
     name: 'now',
     description: 'Cafeで今流れている曲やCafeにいる人数などを表示します',
-    execute: async (client, interaction) => {
+    execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 
         const userCount = await fetchCafeAPI('/api/cafe/user_count');

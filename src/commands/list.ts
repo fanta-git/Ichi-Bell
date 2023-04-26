@@ -53,7 +53,7 @@ const list: SlashCommand = {
             maxValue: 25
         }
     ],
-    execute: async (client, interaction) => {
+    execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 
         const sortType = interaction.options.getString(OPTIONS.SORT) ?? CHOICE.DEFAULT;

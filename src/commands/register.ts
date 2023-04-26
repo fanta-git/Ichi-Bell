@@ -18,7 +18,7 @@ const register: SlashCommand = {
         description: '追加するプレイリストのURL',
         required: true
     }],
-    execute: async (client, interaction) => {
+    execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 
         const url = interaction.options.getString(OPTIONS.URL) as string;

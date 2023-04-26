@@ -24,7 +24,7 @@ const timetable: SlashCommand = {
             maxValue: 25
         }
     ],
-    execute: async (client, interaction) => {
+    execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;

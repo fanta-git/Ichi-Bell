@@ -17,7 +17,7 @@ const unregister: SlashCommand = {
         description: '登録を解除させたいユーザー（ユーザー指定にはチャンネルの管理権限が必要です）',
         required: false
     }],
-    execute: async (client, interaction) => {
+    execute: async interaction => {
         const target = interaction.options.getUser(OPTIONS.TARGET) ?? interaction.user;
         const isMyself = target.id === interaction.user.id;
 

@@ -5,14 +5,14 @@ import { customReply } from './embedsUtil';
 
 const commandsMap = new Map([...Object.entries(commands)]);
 
-const executeCommand = async (client: discord.Client<boolean>, interaction: discord.Interaction<discord.CacheType>) => {
+const executeCommand = async (interaction: discord.Interaction<discord.CacheType>) => {
     if (!interaction.isChatInputCommand()) return;
     const calledCommand = commandsMap.get(interaction.commandName);
 
     if (calledCommand === undefined) return;
 
     try {
-        await calledCommand.execute(client, interaction);
+        await calledCommand.execute(interaction);
     } catch (e) {
         if (e instanceof CommandsWarn) {
             await customReply(interaction, {

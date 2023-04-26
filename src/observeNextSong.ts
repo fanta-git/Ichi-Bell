@@ -11,11 +11,11 @@ const API_UPDATE_WAIT = 3e3;
 const API_ERROR_WAIT = 10e3;
 const NOTICE_MSG = 'リストの曲が流れるよ！';
 
-const observeNextSong = async (client: Client) => {
+const observeNextSong = async (client: Client<true>) => {
     while (true) {
         try {
             const nowSong = await fetchCafeAPI('/api/cafe/now_playing');
-            client.user?.setActivity({
+            client.user.setActivity({
                 name: nowSong.title,
                 type: ActivityType.Listening
             });
@@ -47,7 +47,7 @@ const waitRingAt = async () => {
     }
 };
 
-const ringBell = async (client: Client, songData: ReturnCafeSong) => {
+const ringBell = async (client: Client<true>, songData: ReturnCafeSong) => {
     const sendedMessages: Message[] = [];
     const targetsAll = await db.getTargetUsers(songData.video_id);
     const targetsEachChannel = devide(targetsAll, v => v.channelId);
