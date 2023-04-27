@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, EmbedBuilder, escapeMarkdown, hyperlink, time, underscore } from 'discord.js';
+import { APIEmbed, ApplicationCommandOptionType, escapeMarkdown, hyperlink, time, underscore } from 'discord.js';
 import { CommandsWarn } from '../customErrors';
 import db from '../database/db';
 import { WARN_MESSAGES, subdivision } from '../embedsUtil';
@@ -45,12 +45,12 @@ const timetable: SlashCommand = {
             return `${played} ${decorated}\n└${newFav}${rotate}`;
         });
 
-        const pages = subdivision(songLines, limit).map(v => new EmbedBuilder({
+        const pages = subdivision(songLines, limit).map(v => ({
             title: '選曲履歴100',
             description: v.join('\n')
-        }));
+        } satisfies APIEmbed));
 
-        if (pages.some(v => v.data.description && v.data.description.length > EMBED_DESCRIPTION_LIMIT)) throw new CommandsWarn(WARN_MESSAGES.OVER_CHARLENGTH);
+        if (pages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) throw new CommandsWarn(WARN_MESSAGES.OVER_CHARLENGTH);
 
         await noteSend(interaction, pages);
     }

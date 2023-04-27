@@ -1,4 +1,4 @@
-import { CommandInteraction, EmbedBuilder, InteractionEditReplyOptions, InteractionReplyOptions, MessagePayload, bold, channelLink, escapeMarkdown, inlineCode, quote } from 'discord.js';
+import { APIEmbed, CommandInteraction, InteractionEditReplyOptions, InteractionReplyOptions, MessagePayload, bold, channelLink, escapeMarkdown, inlineCode, quote } from 'discord.js';
 import { PlaylistContents } from './apiTypes';
 import { playlist } from './database/ListDatabase';
 
@@ -17,17 +17,17 @@ const abbreviate = (str: string) => {
     return abbreviated.map(quote).join('\n');
 };
 
-export const formatListDataEmbed = (list: playlist, noticeChannelId: string) => new EmbedBuilder({
+export const formatListDataEmbed = (list: playlist, noticeChannelId: string) => ({
     ...formatTitle(list),
     description: `${abbreviate(escapeMarkdown(list.description))}\n:loudspeaker:通知場所：${channelLink(noticeChannelId)}`,
     footer: { text: '最終更新' },
     timestamp: list.updatedAt
-});
+} satisfies APIEmbed);
 
 export const formatTitle = (list: playlist) => ({
     title: `${bold(escapeMarkdown(list.title))}${inlineCode(`（全${list.songIds.length}曲）`)}`,
     url: `https://kiite.jp/playlist/${list.listId}`
-});
+} satisfies APIEmbed);
 
 export const subdivision = <T>(array: T[], number: number):T[][] => {
     const length = Math.ceil(array.length / number);

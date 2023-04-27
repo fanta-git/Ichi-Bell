@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, escapeMarkdown, hyperlink, time } from 'discord.js';
+import { APIEmbed, ApplicationCommandOptionType, escapeMarkdown, hyperlink, time } from 'discord.js';
 import { CommandsWarn } from '../customErrors';
 import db from '../database/db';
 import { WARN_MESSAGES, formatListDataEmbed, formatTitle, subdivision } from '../embedsUtil';
@@ -70,7 +70,7 @@ const list: SlashCommand = {
         const playlistDataPage = formatListDataEmbed(playlist, channelId);
 
         const dateOrUndefined = (time: string | undefined) => time === undefined ? undefined : new Date(time);
-        const displayDataList = details.map((item) => ({
+        const displayDataList: DisplayDataList = details.map((item) => ({
             videoId: item.video_id,
             title: item.title,
             lastStartTime: dateOrUndefined(playeds.find(v => v.video_id === item.video_id)?.start_time),
@@ -90,7 +90,7 @@ const list: SlashCommand = {
         const songDataPages = subdivision(playedLines, limit).map(v => ({
             ...formatTitle(playlist),
             description: v.join('\n')
-        }));
+        } satisfies APIEmbed));
 
         if (songDataPages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) {
             throw new CommandsWarn(WARN_MESSAGES.OVER_CHARLENGTH);
