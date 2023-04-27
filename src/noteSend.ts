@@ -1,4 +1,5 @@
-import discord from 'discord.js';
+import { APIEmbed, ActionRowBuilder, ButtonBuilder, ButtonStyle, CommandInteraction, ComponentType, StringSelectMenuBuilder } from 'discord.js';
+import { customReply } from './embedsUtil';
 
 const TIMEOUT = 60e3;
 
@@ -9,18 +10,11 @@ const CUSTOM_ID = {
     SELECT: 'select'
 } as const;
 
-type embed = discord.JSONEncodable<discord.APIEmbed> | discord.APIEmbed;
-
-const noteSend = async (interaction: discord.CommandInteraction, embeds: embed[]) => {
+const noteSend = async (interaction: CommandInteraction, embeds: APIEmbed[]) => {
     let currentPage = 0;
     const sendMessage = createMessage(embeds, currentPage);
-    if (interaction.deferred || interaction.replied) {
-        await interaction.editReply(sendMessage);
-    } else {
-        await interaction.reply(sendMessage);
-    }
+    const reply = await customReply(interaction, sendMessage);
 
-    const reply = await interaction.fetchReply();
     const collector = reply.createMessageComponentCollector({
         filter: v => v.user.id === interaction.user.id,
         idle: TIMEOUT
@@ -32,7 +26,7 @@ const noteSend = async (interaction: discord.CommandInteraction, embeds: embed[]
         } else if (item.customId === CUSTOM_ID.NEXT) {
             currentPage++;
         } else if (item.customId === CUSTOM_ID.SELECT) {
-            if (item.isSelectMenu()) currentPage = Number(item.values[0]);
+            if (item.isStringSelectMenu()) currentPage = Number(item.values[0]);
         }
 
         const showJumpMenu = item.customId === CUSTOM_ID.JUMP;
@@ -53,10 +47,10 @@ const noteSend = async (interaction: discord.CommandInteraction, embeds: embed[]
     });
 };
 
-const createMessage = (embeds: embed[], currentPage: number, displayJump = false) => ({
+const createMessage = (embeds: APIEmbed[], currentPage: number, displayJump = false) => ({
     embeds: [embeds[currentPage]],
     components: [
-        new discord.ActionRowBuilder<discord.ButtonBuilder | discord.SelectMenuBuilder>({
+        new ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>({
             components: displayJump
                 ? createJumpComponent(currentPage, embeds.length)
                 : createMoveComponent(currentPage, embeds.length)
@@ -66,10 +60,10 @@ const createMessage = (embeds: embed[], currentPage: number, displayJump = false
 });
 
 const createJumpComponent = (currentPage: number, maxPage: number) => [
-    new discord.SelectMenuBuilder({
+    new StringSelectMenuBuilder({
         custom_id: CUSTOM_ID.SELECT,
-        type: discord.ComponentType.SelectMenu,
-        options: Array(maxPage + 1).fill(undefined).map((_, i) => ({
+        type: ComponentType.StringSelect,
+        options: Array(maxPage).fill(undefined).map((_, i) => ({
             label: `${i + 1}ページ目`,
             value: String(i),
             default: i === currentPage
@@ -78,20 +72,20 @@ const createJumpComponent = (currentPage: number, maxPage: number) => [
 ];
 
 const createMoveComponent = (currentPage: number, maxPage: number) => [
-    new discord.ButtonBuilder({
+    new ButtonBuilder({
         customId: CUSTOM_ID.PREV,
-        style: discord.ButtonStyle.Secondary,
+        style: ButtonStyle.Secondary,
         emoji: '◀️',
         disabled: currentPage === 0
     }),
-    new discord.ButtonBuilder({
+    new ButtonBuilder({
         customId: CUSTOM_ID.JUMP,
-        style: discord.ButtonStyle.Primary,
+        style: ButtonStyle.Primary,
         label: `${currentPage + 1}/${maxPage}`
     }),
-    new discord.ButtonBuilder({
+    new ButtonBuilder({
         customId: CUSTOM_ID.NEXT,
-        style: discord.ButtonStyle.Secondary,
+        style: ButtonStyle.Secondary,
         emoji: '▶️',
         disabled: currentPage === maxPage - 1
     })

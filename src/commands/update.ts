@@ -5,9 +5,11 @@ import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from './SlashCommand';
 
 const update: SlashCommand = {
-    name: 'update',
-    description: '登録されているリストの情報を再登録し、Kiiteのプレイリストの更新を反映させます',
-    execute: async (client, interaction) => {
+    data: {
+        name: 'update',
+        description: '登録されているリストの情報を再登録し、Kiiteのプレイリストの更新を反映させます'
+    },
+    execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 
         const { playlist, channelId } = await db.getUser(interaction.user.id) ?? {};
@@ -25,7 +27,7 @@ const update: SlashCommand = {
 
         await interaction.editReply({
             content: '以下のリストから通知リストを更新しました！',
-            embeds: [formatListDataEmbed(formated)]
+            embeds: [formatListDataEmbed(formated, interaction.channelId)]
         });
     }
 };

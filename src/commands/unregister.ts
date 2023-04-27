@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, PermissionFlagsBits } from 'discord.js';
+import { ApplicationCommandOptionType, PermissionFlagsBits, userMention } from 'discord.js';
 import SlashCommand from './SlashCommand';
 import db from '../database/db';
 import { CommandsWarn } from '../customErrors';
@@ -9,15 +9,17 @@ const OPTIONS = {
 } as const;
 
 const unregister: SlashCommand = {
-    name: 'unregister',
-    description: 'リストの登録を解除し、選曲通知を停止します',
-    options: [{
-        type: ApplicationCommandOptionType.User,
-        name: OPTIONS.TARGET,
-        description: '登録を解除させたいユーザー（ユーザー指定にはチャンネルの管理権限が必要です）',
-        required: false
-    }],
-    execute: async (client, interaction) => {
+    data: {
+        name: 'unregister',
+        description: 'リストの登録を解除し、選曲通知を停止します',
+        options: [{
+            type: ApplicationCommandOptionType.User,
+            name: OPTIONS.TARGET,
+            description: '登録を解除させたいユーザー（ユーザー指定にはチャンネルの管理権限が必要です）',
+            required: false
+        }]
+    },
+    execute: async interaction => {
         const target = interaction.options.getUser(OPTIONS.TARGET) ?? interaction.user;
         const isMyself = target.id === interaction.user.id;
 
@@ -34,7 +36,7 @@ const unregister: SlashCommand = {
         await db.deleateUser(target.id);
 
         await interaction.editReply({
-            content: isMyself ? 'リストの登録を解除しました！' : `<@${target.id}>のリストの登録を解除しました！`
+            content: isMyself ? 'リストの登録を解除しました！' : `${userMention(target.id)}のリストの登録を解除しました！`
         });
     }
 };

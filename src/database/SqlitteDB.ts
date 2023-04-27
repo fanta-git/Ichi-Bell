@@ -6,15 +6,11 @@ const RINGED = 'ringed';
 const SQLITE = 'sqlite://db.sqlite';
 
 class SqliteDB implements ListDatabase {
-    #targets: Keyv<string[]>
-    #usersKeyv: Keyv<user>
-    #utilDataKeyv: Keyv<ReturnCafeSong>
+    #targets = new Keyv(SQLITE, { table: 'noticeList' });
+    #usersKeyv = new Keyv(SQLITE, { table: 'userData' });
+    #utilDataKeyv = new Keyv(SQLITE, { table: 'utilData' });
 
     constructor () {
-        this.#targets = new Keyv(SQLITE, { table: 'noticeList' });
-        this.#usersKeyv = new Keyv(SQLITE, { table: 'userData' });
-        this.#utilDataKeyv = new Keyv(SQLITE, { table: 'utilData' });
-
         this.#listInit();
     }
 

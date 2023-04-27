@@ -10,15 +10,17 @@ const OPTIONS = {
 } as const;
 
 const register: SlashCommand = {
-    name: 'register',
-    description: '通知する曲のリストとしてKiiteのプレイリストを登録します',
-    options: [{
-        type: ApplicationCommandOptionType.String,
-        name: OPTIONS.URL,
-        description: '追加するプレイリストのURL',
-        required: true
-    }],
-    execute: async (client, interaction) => {
+    data: {
+        name: 'register',
+        description: '通知する曲のリストとしてKiiteのプレイリストを登録します',
+        options: [{
+            type: ApplicationCommandOptionType.String,
+            name: OPTIONS.URL,
+            description: '追加するプレイリストのURL',
+            required: true
+        }]
+    },
+    execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 
         const url = interaction.options.getString(OPTIONS.URL) as string;
@@ -37,7 +39,7 @@ const register: SlashCommand = {
 
         await interaction.editReply({
             content: '以下のリストを通知リストとして登録しました！',
-            embeds: [formatListDataEmbed(formated)]
+            embeds: [formatListDataEmbed(formated, interaction.channelId)]
         });
     }
 };

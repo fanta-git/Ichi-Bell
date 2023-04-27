@@ -1,10 +1,10 @@
-import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js';
-import noteSend from '../noteSend';
-import { WARN_MESSAGES, formatLastPlayed, subdivision } from '../embedsUtil';
-import fetchCafeAPI from '../fetchCafeAPI';
-import SlashCommand from './SlashCommand';
-import db from '../database/db';
+import { APIEmbed, ApplicationCommandOptionType, escapeMarkdown, hyperlink, time, underscore } from 'discord.js';
 import { CommandsWarn } from '../customErrors';
+import db from '../database/db';
+import { WARN_MESSAGES, subdivision } from '../embedsUtil';
+import fetchCafeAPI from '../fetchCafeAPI';
+import noteSend from '../noteSend';
+import SlashCommand from './SlashCommand';
 
 const LIMIT = 10;
 const OPTIONS = {
@@ -14,17 +14,19 @@ const OPTIONS = {
 const EMBED_DESCRIPTION_LIMIT = 4096;
 
 const timetable: SlashCommand = {
-    name: 'timetable',
-    description: 'Cafeの選曲履歴を表示します',
-    options: [
-        {
-            type: ApplicationCommandOptionType.Integer,
-            name: OPTIONS.LIMIT,
-            description: '1ページに表示する曲数',
-            maxValue: 25
-        }
-    ],
-    execute: async (client, interaction) => {
+    data: {
+        name: 'timetable',
+        description: 'Cafeの選曲履歴を表示します',
+        options: [
+            {
+                type: ApplicationCommandOptionType.Integer,
+                name: OPTIONS.LIMIT,
+                description: '1ページに表示する曲数',
+                maxValue: 25
+            }
+        ]
+    },
+    execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 
         const limit = interaction.options.getInteger(OPTIONS.LIMIT) ?? LIMIT;
@@ -33,22 +35,22 @@ const timetable: SlashCommand = {
         const data = await fetchCafeAPI('/api/cafe/timetable', { limit: 100 });
         const selectionIds = data.map(v => v.id);
         const rotates = await fetchCafeAPI('/api/cafe/rotate_users', { ids: selectionIds });
-        const songLines = data.map((v, i) => {
-            const played = i ? `[${formatLastPlayed(v.start_time)}]` : '**[ON AIR]**';
-            const title = `[${v.title}](https://www.nicovideo.jp/watch/${v.video_id})`;
-            const registedUnder = playlist?.songIds.includes(v.video_id) ? '__' : '';
+        const songLines = data.map(v => {
+            const played = time(new Date(v.start_time), 'R');
+            const title = hyperlink(escapeMarkdown(v.title), `https://www.nicovideo.jp/watch/${v.video_id}`);
+            const decorated = playlist?.songIds.includes(v.video_id) ? underscore(title) : title;
             const newFav = `:heartpulse:${v.new_fav_user_ids?.length ?? 0}`;
             const rotate = `:arrows_counterclockwise:${rotates[v.id]?.length ?? 0}`;
 
-            return `**${i + 1}.**${registedUnder}${title}${registedUnder}\n└${played}${newFav}${rotate}`;
+            return `${played} ${decorated}\n└${newFav}${rotate}`;
         });
 
-        const pages = subdivision(songLines, limit).map(v => new EmbedBuilder({
+        const pages = subdivision(songLines, limit).map(v => ({
             title: '選曲履歴100',
             description: v.join('\n')
-        }));
+        } satisfies APIEmbed));
 
-        if (pages.some(v => v.data.description && v.data.description.length > EMBED_DESCRIPTION_LIMIT)) throw new CommandsWarn(WARN_MESSAGES.OVER_CHARLENGTH);
+        if (pages.some(v => v.description.length > EMBED_DESCRIPTION_LIMIT)) throw new CommandsWarn(WARN_MESSAGES.OVER_CHARLENGTH);
 
         await noteSend(interaction, pages);
     }

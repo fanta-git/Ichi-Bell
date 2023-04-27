@@ -1,10 +1,15 @@
+import { escapeMarkdown } from 'discord.js';
 import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from './SlashCommand';
 
+const SEEKBAR_LENGTH = 12;
+
 const now: SlashCommand = {
-    name: 'now',
-    description: 'Cafeで今流れている曲やCafeにいる人数などを表示します',
-    execute: async (client, interaction) => {
+    data: {
+        name: 'now',
+        description: 'Cafeで今流れている曲やCafeにいる人数などを表示します'
+    },
+    execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 
         const userCount = await fetchCafeAPI('/api/cafe/user_count');
@@ -13,10 +18,10 @@ const now: SlashCommand = {
         const artistData = await fetchCafeAPI('/api/artist/id', { artist_id: nowSong.artist_id });
         await interaction.editReply({
             embeds: [{
-                title: nowSong.title,
+                title: escapeMarkdown(nowSong.title),
                 url: 'https://www.nicovideo.jp/watch/' + nowSong.baseinfo.video_id,
                 author: {
-                    name: nowSong.baseinfo.user_nickname,
+                    name: escapeMarkdown(nowSong.baseinfo.user_nickname),
                     icon_url: nowSong.baseinfo.user_icon_url,
                     url: 'https://kiite.jp/creator/' + artistData?.creator_id ?? ''
                 },
@@ -24,7 +29,7 @@ const now: SlashCommand = {
                 color: parseInt(nowSong.colors[0].slice(1), 16),
                 fields: [
                     {
-                        name: formatStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, 12),
+                        name: formatStatusbar(Date.now() - Date.parse(nowSong.start_time), nowSong.msec_duration, SEEKBAR_LENGTH),
                         value: `${msTommss(Date.now() - Date.parse(nowSong.start_time))} / ${msTommss(nowSong.msec_duration)}`,
                         inline: false
                     },
@@ -50,12 +55,12 @@ const now: SlashCommand = {
 };
 
 const formatStatusbar = (nowVal: number, maxVal: number, barLength: number) => {
-    const nowLength = nowVal * (barLength - 1) / maxVal | 0;
+    const nowLength = nowVal * barLength / maxVal | 0;
     const statusbarArr: string[] = new Array(barLength).fill('').map((_, i) => {
-        if (i === 0) return (nowLength > 0) ? '┣' : '┠';
-        if (i === barLength - 1) return (barLength - 1 <= nowLength) ? '┫' : '┤';
-        if (i === nowLength) return '╉';
-        return (i < nowLength) ? '━' : '─';
+        if (i === nowLength) return '○';
+        if (i === 0) return '╞';
+        if (i === barLength - 1) return '╡';
+        return '═';
     });
     return statusbarArr.join('');
 };
