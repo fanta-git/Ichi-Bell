@@ -5,8 +5,10 @@ import fetchCafeAPI from '../fetchCafeAPI';
 import SlashCommand from './SlashCommand';
 
 const update: SlashCommand = {
-    name: 'update',
-    description: '登録されているリストの情報を再登録し、Kiiteのプレイリストの更新を反映させます',
+    data: {
+        name: 'update',
+        description: '登録されているリストの情報を再登録し、Kiiteのプレイリストの更新を反映させます'
+    },
     execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 

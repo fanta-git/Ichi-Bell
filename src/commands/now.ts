@@ -5,8 +5,10 @@ import SlashCommand from './SlashCommand';
 const SEEKBAR_LENGTH = 12;
 
 const now: SlashCommand = {
-    name: 'now',
-    description: 'Cafeで今流れている曲やCafeにいる人数などを表示します',
+    data: {
+        name: 'now',
+        description: 'Cafeで今流れている曲やCafeにいる人数などを表示します'
+    },
     execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 

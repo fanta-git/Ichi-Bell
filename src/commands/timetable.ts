@@ -14,16 +14,18 @@ const OPTIONS = {
 const EMBED_DESCRIPTION_LIMIT = 4096;
 
 const timetable: SlashCommand = {
-    name: 'timetable',
-    description: 'Cafeの選曲履歴を表示します',
-    options: [
-        {
-            type: ApplicationCommandOptionType.Integer,
-            name: OPTIONS.LIMIT,
-            description: '1ページに表示する曲数',
-            maxValue: 25
-        }
-    ],
+    data: {
+        name: 'timetable',
+        description: 'Cafeの選曲履歴を表示します',
+        options: [
+            {
+                type: ApplicationCommandOptionType.Integer,
+                name: OPTIONS.LIMIT,
+                description: '1ページに表示する曲数',
+                maxValue: 25
+            }
+        ]
+    },
     execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 

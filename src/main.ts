@@ -20,11 +20,12 @@ client.once('ready', async readyClient => {
         readyClient.destroy();
     });
 
+    const commandsData = Object.values(commands).map(v => v.data);
     if (TEST_SERVER_ID === undefined) {
-        readyClient.application.commands.set(Object.values(commands));
+        readyClient.application.commands.set(commandsData);
     } else {
         readyClient.application.commands.set([]);
-        readyClient.application.commands.set(Object.values(commands), TEST_SERVER_ID);
+        readyClient.application.commands.set(commandsData, TEST_SERVER_ID);
     }
 });
 

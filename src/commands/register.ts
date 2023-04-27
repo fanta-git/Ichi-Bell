@@ -10,14 +10,16 @@ const OPTIONS = {
 } as const;
 
 const register: SlashCommand = {
-    name: 'register',
-    description: '通知する曲のリストとしてKiiteのプレイリストを登録します',
-    options: [{
-        type: ApplicationCommandOptionType.String,
-        name: OPTIONS.URL,
-        description: '追加するプレイリストのURL',
-        required: true
-    }],
+    data: {
+        name: 'register',
+        description: '通知する曲のリストとしてKiiteのプレイリストを登録します',
+        options: [{
+            type: ApplicationCommandOptionType.String,
+            name: OPTIONS.URL,
+            description: '追加するプレイリストのURL',
+            required: true
+        }]
+    },
     execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 

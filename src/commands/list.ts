@@ -34,25 +34,27 @@ const sorter: Record<string, ((arr: DisplayDataList) => DisplayDataList) | undef
 };
 
 const list: SlashCommand = {
-    name: 'list',
-    description: '登録されているリストの情報を表示します',
-    options: [
-        {
-            type: ApplicationCommandOptionType.String,
-            name: OPTIONS.SORT,
-            description: '表示順',
-            choices: [
-                { name: 'default', value: CHOICE.DEFAULT },
-                { name: 'cooltime', value: CHOICE.COOLTIME }
-            ]
-        },
-        {
-            type: ApplicationCommandOptionType.Integer,
-            name: OPTIONS.LIMIT,
-            description: '1ページに表示する曲数',
-            maxValue: 25
-        }
-    ],
+    data: {
+        name: 'list',
+        description: '登録されているリストの情報を表示します',
+        options: [
+            {
+                type: ApplicationCommandOptionType.String,
+                name: OPTIONS.SORT,
+                description: '表示順',
+                choices: [
+                    { name: 'default', value: CHOICE.DEFAULT },
+                    { name: 'cooltime', value: CHOICE.COOLTIME }
+                ]
+            },
+            {
+                type: ApplicationCommandOptionType.Integer,
+                name: OPTIONS.LIMIT,
+                description: '1ページに表示する曲数',
+                maxValue: 25
+            }
+        ]
+    },
     execute: async interaction => {
         await interaction.deferReply({ ephemeral: true });
 

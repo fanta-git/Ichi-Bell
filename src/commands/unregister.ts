@@ -9,14 +9,16 @@ const OPTIONS = {
 } as const;
 
 const unregister: SlashCommand = {
-    name: 'unregister',
-    description: 'リストの登録を解除し、選曲通知を停止します',
-    options: [{
-        type: ApplicationCommandOptionType.User,
-        name: OPTIONS.TARGET,
-        description: '登録を解除させたいユーザー（ユーザー指定にはチャンネルの管理権限が必要です）',
-        required: false
-    }],
+    data: {
+        name: 'unregister',
+        description: 'リストの登録を解除し、選曲通知を停止します',
+        options: [{
+            type: ApplicationCommandOptionType.User,
+            name: OPTIONS.TARGET,
+            description: '登録を解除させたいユーザー（ユーザー指定にはチャンネルの管理権限が必要です）',
+            required: false
+        }]
+    },
     execute: async interaction => {
         const target = interaction.options.getUser(OPTIONS.TARGET) ?? interaction.user;
         const isMyself = target.id === interaction.user.id;
