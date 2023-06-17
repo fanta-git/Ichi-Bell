@@ -50,4 +50,4 @@ Cafeでの選曲履歴を表示します。
 
 ## 何かあったら
 [@fantaji_cps](https://twitter.com/fantaji_cps)まで  
-Discordでもどうぞ→ふぁんた#7605  
+Discordでもどうぞ→fanta0328  
