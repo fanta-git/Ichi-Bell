@@ -1,4 +1,4 @@
-import { ActivityType, Client, Message, underscore, userMention } from 'discord.js';
+import { ActivityType, Client, Message, escapeMarkdown, hideLinkEmbed, hyperlink, userMention } from 'discord.js';
 
 import { ReturnCafeSong } from './apiTypes';
 import db from './database/db';
@@ -69,8 +69,13 @@ const ringBell = async (client: Client<true>, songData: ReturnCafeSong) => {
 
     await timer(timeDuration(songData.start_time));
 
+    const songUrlHyperLink = hyperlink(
+        escapeMarkdown(songData.title),
+        hideLinkEmbed(`https://www.nicovideo.jp/watch/${songData.video_id}`)
+    );
+
     for (const msg of sendedMessages) {
-        msg.edit(msg.content.replace(NOTICE_MSG, `${underscore(songData.title)}が流れたよ！`));
+        msg.edit(msg.content.replace(NOTICE_MSG, `${songUrlHyperLink}が流れたよ！`));
     }
 };
 
